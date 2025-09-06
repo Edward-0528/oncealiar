@@ -1,0 +1,17 @@
+{
+  "name": "once-a-liar-monorepo",
+  "private": true,
+  "workspaces": ["client", "server", "shared"],
+  "scripts": {
+    "build": "npm --workspace shared run build && npm --workspace server run build && npm --workspace client run build",
+  "dev": "concurrently \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:client": "npm --workspace client run dev",
+    "dev:server": "npm --workspace server run dev",
+    "typecheck": "npm -ws run typecheck"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.4.0",
+    "@types/node": "^20.11.30"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "name": "@oncealiar/server",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "predev": "npm --workspace ../shared run build || true",
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5",
+  "nanoid": "^5.0.5",
+  "@oncealiar/shared": "file:../shared"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0",
+    "@types/express": "^4.17.21",
+    "@types/cors": "^2.8.18",
+    "@types/node": "^20.11.30"
+  }
+}

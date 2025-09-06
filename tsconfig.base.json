@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2021",
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "useUnknownInCatchVariables": false,
+    "lib": ["ES2021", "DOM"],
+    "types": ["node"]
+  },
+  "references": [
+    { "path": "shared" },
+    { "path": "server" },
+    { "path": "client" }
+  ]
+}

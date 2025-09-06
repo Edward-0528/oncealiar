@@ -1,0 +1,15 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+  "baseUrl": "./",
+    "paths": {
+      "@oncealiar/shared": ["../shared/src/index.ts"],
+      "@oncealiar/shared/*": ["../shared/src/*"]
+    }
+  },
+  "include": ["src"],
+  "references": [
+    { "path": "../shared" }
+  ]
+}
