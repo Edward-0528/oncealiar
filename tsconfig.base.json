@@ -10,7 +10,7 @@
     "resolveJsonModule": true,
     "useUnknownInCatchVariables": false,
     "lib": ["ES2021", "DOM"],
-    "types": ["node"]
+  "types": ["node", "vitest"]
   },
   "references": [
     { "path": "shared" },

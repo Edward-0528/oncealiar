@@ -15,6 +15,7 @@ export const App: React.FC = () => {
   const [joinCodeInput, setJoinCodeInput] = useState('');
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const attemptedAutoJoinRef = useRef(false);
+  const reclaimTriedRef = useRef(false);
 
   // Read ?room=CODE from URL once
   useEffect(() => {
@@ -37,11 +38,15 @@ export const App: React.FC = () => {
         setGame(structuredClone(state));
         setYou(youId);
         if (state.code) setRoomCode(state.code);
+        // persist latest identity
+        try {
+          localStorage.setItem('oncealiar_player', youId);
+        } catch {}
       });
       socket.on('round', r => setRound(r));
       socket.on('error', msg => alert(msg));
-      socket.on('room:created', code => { setRoomCode(code); generateQr(code); pushCodeToUrl(code); });
-      socket.on('room:joined', code => { setRoomCode(code); generateQr(code); pushCodeToUrl(code); });
+  socket.on('room:created', (code, youId) => { setRoomCode(code); if (youId) setYou(youId); generateQr(code); pushCodeToUrl(code); });
+  socket.on('room:joined', (code, youId) => { setRoomCode(code); if (youId) setYou(youId); generateQr(code); pushCodeToUrl(code); });
     }
     return () => { /* keep socket persistent */ };
   }, [roomCode]);
@@ -49,6 +54,25 @@ export const App: React.FC = () => {
   // Auto attempt join if we have a code but not yet in a game (fresh page load or reconnect)
   useEffect(() => {
     if (!socket || !connected) return;
+    // First, attempt reclaim if not done
+    if (!reclaimTriedRef.current) {
+      reclaimTriedRef.current = true;
+      const storedPlayer = localStorage.getItem('oncealiar_player');
+      if (storedPlayer) {
+        socket.emit('player:reclaim', storedPlayer, (ok: boolean, code?: string) => {
+          if (ok && code) {
+            // success: roomCode will arrive via game:update
+            return;
+          }
+          // fallback to join if we already have a stored room
+          const storedRoom = localStorage.getItem('oncealiar_room');
+          if (storedRoom) {
+            socket?.emit('room:join', storedRoom);
+          }
+        });
+        return;
+      }
+    }
     if (!roomCode) return;
     if (game) return; // already in game
     if (attemptedAutoJoinRef.current) return;
@@ -79,6 +103,8 @@ export const App: React.FC = () => {
   function vote(pid: PlayerID) { socket?.emit('vote', pid); }
 
   const isHost = you && game?.hostId === you;
+  const playerCount = game ? Object.keys(game.players).length : 0;
+  const minPlayers = (game as any)?.settings?.minPlayers ?? 3;
   const now = Date.now();
   const timeRemaining = useMemo(() => {
     if (!round?.endsAt) return null;
@@ -86,10 +112,19 @@ export const App: React.FC = () => {
   }, [round, now]);
 
   function generateQr(code: string) {
-    // Lightweight inline QR alternative (no dependency) using a free API (could later swap to local lib to avoid external call)
-    const url = `${window.location.origin}?room=${code}`;
-    // Use Google Chart quick API (for dev only). Replace with local generator before production.
-    setQrDataUrl(`https://chart.googleapis.com/chart?cht=qr&chs=180x180&chl=${encodeURIComponent(url)}`);
+    // Derive a shareable base URL. If running on localhost but we have a stored lanHost in localStorage, use it.
+    const stored = localStorage.getItem('oncealiar_lan_host');
+    const loc = window.location;
+    let origin = loc.origin;
+    if (stored && /^(https?:)?\/\//.test(stored)) {
+      origin = stored.replace(/\/$/, '');
+    } else if (stored) {
+      origin = `${loc.protocol}//${stored}`;
+    }
+    const shareUrl = `${origin}?room=${code}`;
+    // Use quick chart API for dev; could swap to local QR lib later.
+    const api = 'https://chart.googleapis.com/chart';
+    setQrDataUrl(`${api}?cht=qr&chs=220x220&chl=${encodeURIComponent(shareUrl)}&chld=H|0`);
   }
 
   return (
@@ -124,6 +159,14 @@ export const App: React.FC = () => {
         <section style={{ marginTop: 24 }}>
           <h2>Room Code: <code style={{ fontSize: 24, letterSpacing: 4 }}>{roomCode}</code></h2>
           {qrDataUrl && <img alt="QR Code" src={qrDataUrl} style={{ background: '#fff', padding: 8, borderRadius: 8 }} />}
+          <details style={{ marginTop: 12 }}>
+            <summary style={{ cursor: 'pointer' }}>Mobile / LAN Help</summary>
+            <div style={{ fontSize: 12, lineHeight: 1.4, marginTop: 8 }}>
+              <p style={{ margin: '4px 0' }}>If phones can't scan or connect, ensure you started with the LAN script (<code>npm run dev:lan</code>) so this page is served on your local IP instead of just <code>localhost</code>.</p>
+              <p style={{ margin: '4px 0' }}>To force a specific host/IP (e.g. 192.168.1.42:5173) enter it here (with or without protocol) then refresh the QR:</p>
+              <LanHostSetter onRefresh={() => roomCode && generateQr(roomCode)} />
+            </div>
+          </details>
           <p style={{ opacity: 0.8 }}>Share the code or QR. When ready, enter your player details:</p>
           <div>
             <input placeholder="Name" value={name} onChange={e => setName(e.target.value)} />{' '}
@@ -140,8 +183,7 @@ export const App: React.FC = () => {
             <h2 style={{ marginTop: 0 }}>Lobby / Players ({Object.keys(game.players).length})</h2>
             <p style={{ marginTop: 0 }}>Room: <strong>{game.code}</strong></p>
             <ul>
-              {Object.values(game.players).map(pRaw => {
-                const p = pRaw as Player;
+              {Object.values<Player>(game.players as Record<string, Player>).map(p => {
                 return (
                   <li key={p.id} style={{ marginBottom: 4 }}>
                     {p.avatar} <strong>{p.name}</strong> {p.id === you && <em>(You)</em>} {p.vote && '🔍'}
@@ -150,7 +192,25 @@ export const App: React.FC = () => {
               })}
             </ul>
             {isHost && game.round.phase === 'lobby' && (
-              <button onClick={start} style={{ marginTop: 8 }}>Start Round</button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+                <button onClick={start} disabled={playerCount < minPlayers}>Start Round</button>
+                {playerCount < minPlayers && (
+                  <span style={{ fontSize: 12, opacity: 0.7 }}>Need {minPlayers} players (have {playerCount}).</span>
+                )}
+              </div>
+            )}
+            {isHost && (
+              <div style={{ marginTop: 16 }}>
+                <details>
+                  <summary style={{ cursor: 'pointer', fontSize: 12, opacity: 0.8 }}>Host Tools (testing)</summary>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
+                    <PhaseButton phase="in-progress" label="Force Start" />
+                    <PhaseButton phase="voting" label="To Voting" />
+                    <PhaseButton phase="reveal" label="Reveal" />
+                    <PhaseButton phase="lobby" label="Reset Lobby" />
+                  </div>
+                </details>
+              </div>
             )}
           </div>
           <div style={{ flex: 2 }}>
@@ -168,8 +228,8 @@ export const App: React.FC = () => {
                 {round.phase === 'voting' && (
                   <div>
                     <h3>Accuse</h3>
-                    {Object.values(game.players).filter(p => p.id !== you).map(p => (
-                      <button key={p.id} onClick={() => vote(p.id)} style={{ margin: 4 }}>{(p as Player).name}</button>
+                    {Object.values<Player>(game.players as Record<string, Player>).filter(p => p.id !== you).map(p => (
+                      <button key={p.id} onClick={() => vote(p.id)} style={{ margin: 4 }}>{p.name}</button>
                     ))}
                   </div>
                 )}
@@ -182,4 +242,35 @@ export const App: React.FC = () => {
       )}
     </div>
   );
+};
+
+const LanHostSetter: React.FC<{ onRefresh: () => void }> = ({ onRefresh }) => {
+  const [value, setValue] = React.useState<string>(() => localStorage.getItem('oncealiar_lan_host') || '');
+  function save() {
+    if (value.trim()) {
+      localStorage.setItem('oncealiar_lan_host', value.trim());
+    } else {
+      localStorage.removeItem('oncealiar_lan_host');
+    }
+    onRefresh();
+  }
+  return (
+    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+      <input
+        placeholder="192.168.1.42:5173"
+        value={value}
+        onChange={e => setValue(e.target.value)}
+        style={{ width: 180 }}
+      />
+      <button onClick={save}>Apply</button>
+      <button onClick={() => { setValue(''); localStorage.removeItem('oncealiar_lan_host'); onRefresh(); }}>Clear</button>
+    </div>
+  );
+};
+
+const PhaseButton: React.FC<{ phase: any; label: string }> = ({ phase, label }) => {
+  function send() {
+    socket?.emit('round:phase', phase);
+  }
+  return <button onClick={send} style={{ fontSize: 12 }}>{label}</button>;
 };

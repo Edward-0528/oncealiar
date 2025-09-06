@@ -1,1 +1,1 @@
-{"root":["./src/env.d.ts","./src/main.tsx","./src/ui/app.tsx"],"errors":true,"version":"5.9.2"}
+{"root":["./src/env.d.ts","./src/main.tsx","./src/ui/app.test.tsx","./src/ui/app.tsx"],"version":"5.9.2"}

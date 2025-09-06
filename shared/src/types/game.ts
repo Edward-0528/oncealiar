@@ -36,6 +36,7 @@ export interface GameSettings {
   allowLateJoin: boolean;
   roundTimePerPlayerSeconds: number; // 72 default? (1.2 * 60)
   minVotePercentage: number; // e.g. 0.6
+  minPlayers?: number; // minimum players required to start
 }
 
 export interface ClientVisibleRound extends Omit<RoundState, 'secretWord'> {
@@ -48,8 +49,8 @@ export interface ServerToClientEvents {
   round: (round: ClientVisibleRound) => void;
   lobby: (state: GameState) => void;
   error: (message: string) => void;
-  'room:created': (code: string) => void;
-  'room:joined': (code: string) => void;
+  'room:created': (code: string, you?: PlayerID) => void;
+  'room:joined': (code: string, you?: PlayerID) => void;
 }
 
 export interface ClientToServerEvents {
@@ -60,4 +61,6 @@ export interface ClientToServerEvents {
   ping: () => void;
   'room:create': () => void;
   'room:join': (code: string) => void;
+  'round:phase': (phase: RoundState['phase']) => void; // testing/manual control
+  'player:reclaim': (oldId: PlayerID, ack: (ok: boolean, code?: string) => void) => void;
 }

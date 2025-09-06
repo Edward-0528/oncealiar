@@ -5,13 +5,23 @@
   "scripts": {
     "build": "npm --workspace shared run build && npm --workspace server run build && npm --workspace client run build",
   "dev": "concurrently \"npm:dev:server\" \"npm:dev:client\"",
+  "dev:lan": "concurrently \"npm:dev:server\" \"npm --workspace client run dev:host\"",
     "dev:client": "npm --workspace client run dev",
     "dev:server": "npm --workspace server run dev",
-    "typecheck": "npm -ws run typecheck"
+  "typecheck": "npm -ws run typecheck",
+  "test": "vitest run",
+  "test:watch": "vitest",
+  "coverage": "vitest run --coverage"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
     "typescript": "^5.4.0",
-    "@types/node": "^20.11.30"
+  "@types/node": "^20.11.30",
+  "vitest": "^1.6.0",
+  "@testing-library/react": "^14.2.1",
+  "@testing-library/jest-dom": "^6.4.2",
+  "@testing-library/user-event": "^14.5.2",
+  "jsdom": "^24.0.0",
+  "socket.io-client": "^4.7.5"
   }
 }

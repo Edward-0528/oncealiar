@@ -6,6 +6,7 @@
   "scripts": {
     "predev": "npm --workspace ../shared run build || true",
     "dev": "vite",
+  "dev:host": "vite --host",
     "build": "tsc -p tsconfig.json && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json --noEmit"
