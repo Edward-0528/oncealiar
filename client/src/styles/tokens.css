@@ -1,0 +1,266 @@
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Sans:wght@400;500;600;700&family=Special+Elite&display=swap');
+
+/* ==========================================================================
+   Design tokens. Every color / radius / font in the app comes from here.
+   A theme is ONLY a token swap: add a [data-theme="..."] block.
+
+   Default: "Tabloid Spy" — newsprint yellow, ink, siren red, manila folders.
+   Alternates (future premium cosmetics): Midnight Masquerade, Cozy Game Night.
+   ========================================================================== */
+
+:root,
+[data-theme='tabloid-spy'] {
+  color-scheme: light;
+
+  /* Raw palette */
+  --news: #ffe14d;          /* newsprint yellow */
+  --ink: #111111;           /* ink black */
+  --siren: #e8322a;         /* siren red (fills, stamps, big type) */
+  --siren-ink: #b3140e;     /* red for SMALL text on paper/yellow: 5.1:1 on #FFE14D, 6.9:1 on white */
+  --manila: #f1e3c2;
+  --manila-deep: #d9c08e;
+  --stamp-blue: #2f7de1;
+  --stamp-blue-ink: #1f5fb0; /* blue for small text: 4.9:1 on white */
+  --hl: #8fe36b;            /* highlighter green */
+  --paper: #ffffff;
+  --paper-2: #f7f3e6;       /* off-white photo paper */
+  --cork: #c79a5b;
+
+  /* Surfaces */
+  --bg: var(--news);
+  --bg-2: #fff4b8;
+  --surface: var(--paper);
+  --surface-2: var(--manila);
+  --surface-3: var(--manila-deep);
+  --surface-deep: var(--ink);
+  --line: rgba(17, 17, 17, 0.22);
+  --line-strong: var(--ink);
+  --scrim: rgba(17, 17, 17, 0.62);
+
+  /* Text */
+  --text: var(--ink);
+  --text-dim: #2a2a2a;
+  --text-faint: #4a4536; /* 7:1 on yellow, 8.6:1 on white */
+
+  /* Brand roles */
+  --accent: var(--siren);
+  --accent-deep: var(--ink);
+  --accent-soft: rgba(232, 50, 42, 0.14);
+  --accent-text: var(--siren-ink);
+  --btn-red: #da2a22;       /* siren red, deepened a hair → 4.7:1 with white label */
+  --on-accent: #ffffff;
+  --highlight: var(--ink);
+  --highlight-deep: #000000;
+  --highlight-soft: rgba(17, 17, 17, 0.08);
+  --on-highlight: var(--news); /* 14.5:1 */
+  --success: #1d7a3a;
+  --on-success: #ffffff;
+  --focus: var(--stamp-blue);
+
+  /* Background art: halftone dots on newsprint */
+  --halftone: radial-gradient(rgba(17, 17, 17, 0.13) 1.2px, transparent 1.45px) 0 0 / 9px 9px;
+  --bg-art: var(--halftone), linear-gradient(180deg, #ffe45a, #ffdc3d);
+  --grain-opacity: 0.05;
+  --vignette: none;
+
+  /* Card back (dossier cover) */
+  --cardback-a: var(--manila);
+  --cardback-b: #ead8ae;
+  --cardback-ink: rgba(17, 17, 17, 0.35);
+
+  /* Shape */
+  --radius-xs: 0px;
+  --radius-sm: 0px;
+  --radius-btn: 0px;
+  --radius: 0px;
+  --radius-lg: 0px;
+  --radius-pill: 999px;
+  --border-w: 3px;
+  --border-color: var(--ink);
+
+  /* Depth: hard offset shadows */
+  --shadow-sm: 3px 3px 0 var(--ink);
+  --shadow-card: 6px 6px 0 var(--ink);
+  --shadow-pop: 8px 8px 0 var(--ink);
+  --btn-depth: 6px;
+  --tilt: 1deg; /* multiply for slight card rotations; 0 in calmer themes */
+
+  /* Type */
+  --font-display: 'Anton', Impact, 'Arial Narrow', sans-serif;
+  --font-ui: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-type: 'Special Elite', 'Courier New', ui-monospace, monospace;
+  --display-weight: 400;
+  --display-transform: uppercase;
+  --display-tracking: 0.01em;
+
+  /* Avatar art */
+  --av-ink: #111111;
+  --av-white: #fffdf5;
+  --av-cheek: #ff8fa3;
+  --av-shade: rgba(17, 17, 17, 0.2);
+  --av-beak: #ffb833;
+  --av-glow: #7cf5ff;
+
+  /* Player colors (ids from PLAYER_COLORS) — "ink colors" */
+  --pc-coral: #ff6b5e;
+  --pc-tangerine: #ff9f43;
+  --pc-sun: #ffd23f;
+  --pc-lime: #a3e635;
+  --pc-mint: #34d8ac;
+  --pc-sky: #4cc9f0;
+  --pc-iris: #8b8cff;
+  --pc-orchid: #c77dff;
+  --pc-rose: #ff7eb6;
+  --pc-slate: #a3b1c6;
+
+  /* Motion */
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --slam: cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+/* ---------- Midnight Masquerade (alternate / premium cosmetic) ---------- */
+[data-theme='midnight'] {
+  color-scheme: dark;
+  --news: #ffc857;
+  --ink: #0a0818;
+  --siren: #ff5a4e;
+  --siren-ink: #ff8278;
+  --manila: #262052;
+  --manila-deep: #332b69;
+  --stamp-blue: #7cb8ff;
+  --stamp-blue-ink: #9cc8ff;
+  --hl: rgba(255, 200, 87, 0.35);
+  --paper: #1c1740;
+  --paper-2: #15112e;
+  --cork: #15112e;
+
+  --bg: #0e0b1f;
+  --bg-2: #15112e;
+  --surface: #1c1740;
+  --surface-2: #262052;
+  --surface-3: #332b69;
+  --surface-deep: #0a0818;
+  --line: rgba(255, 255, 255, 0.1);
+  --line-strong: rgba(255, 255, 255, 0.22);
+  --scrim: rgba(6, 4, 16, 0.72);
+  --text: #f8f4ea;
+  --text-dim: #c3bce0;
+  --text-faint: #958ebb;
+  --accent: #ff5a4e;
+  --accent-deep: #b8352c;
+  --accent-soft: rgba(255, 90, 78, 0.16);
+  --accent-text: #ff8278;
+  --btn-red: #ff5a4e;
+  --on-accent: #1d0909;
+  --highlight: #ffc857;
+  --highlight-deep: #b8861e;
+  --highlight-soft: rgba(255, 200, 87, 0.16);
+  --on-highlight: #2a1a00;
+  --success: #3ddc97;
+  --on-success: #062417;
+  --focus: #ffc857;
+  --halftone: radial-gradient(transparent, transparent);
+  --bg-art:
+    radial-gradient(1200px 700px at 85% -10%, rgba(255, 90, 78, 0.16), transparent 60%),
+    radial-gradient(900px 600px at -10% 110%, rgba(123, 124, 255, 0.18), transparent 60%),
+    linear-gradient(180deg, #120e29 0%, #0e0b1f 55%, #0b0919 100%);
+  --grain-opacity: 0.07;
+  --vignette: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
+  --cardback-a: #2a2160;
+  --cardback-b: #221a50;
+  --cardback-ink: rgba(255, 200, 87, 0.5);
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-btn: 16px;
+  --radius: 22px;
+  --radius-lg: 28px;
+  --border-w: 0px;
+  --border-color: transparent;
+  --shadow-sm: 0 6px 14px -6px rgba(0, 0, 0, 0.6);
+  --shadow-card: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 18px 40px -18px rgba(0, 0, 0, 0.7);
+  --shadow-pop: 0 24px 60px -20px rgba(0, 0, 0, 0.8);
+  --btn-depth: 5px;
+  --tilt: 0deg;
+  --font-display: 'Bricolage Grotesque', 'Inter', system-ui, sans-serif;
+  --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-type: 'Inter', system-ui, sans-serif;
+  --display-weight: 800;
+  --display-transform: none;
+  --display-tracking: -0.02em;
+  --av-ink: #1a1433;
+  --av-white: #fff8ee;
+  --av-shade: rgba(26, 20, 51, 0.22);
+}
+
+/* ---------- Cozy Game Night (alternate / premium cosmetic) ---------- */
+[data-theme='cozy'] {
+  color-scheme: light;
+  --news: #e9a93a;
+  --ink: #3b2620;
+  --siren: #e2665a;
+  --siren-ink: #a8443a;
+  --manila: #f8ebdc;
+  --manila-deep: #f0dcc6;
+  --stamp-blue: #4f7fb8;
+  --stamp-blue-ink: #3a6699;
+  --hl: rgba(233, 169, 58, 0.45);
+  --paper: #fffaf3;
+  --paper-2: #fbf2e6;
+  --cork: #e6cfb2;
+
+  --bg: #fbefe1;
+  --bg-2: #f6e3cf;
+  --surface: #fffaf3;
+  --surface-2: #f8ebdc;
+  --surface-3: #f0dcc6;
+  --surface-deep: #d9bfa3;
+  --line: rgba(84, 52, 38, 0.14);
+  --line-strong: rgba(84, 52, 38, 0.32);
+  --scrim: rgba(61, 38, 28, 0.45);
+  --text: #3b2620;
+  --text-dim: #5e4338;
+  --text-faint: #7c5f52;
+  --accent: #e2665a;
+  --accent-deep: #b04a40;
+  --accent-soft: rgba(226, 102, 90, 0.14);
+  --accent-text: #a8443a;
+  --btn-red: #c9554a;
+  --on-accent: #ffffff;
+  --highlight: #e9a93a;
+  --highlight-deep: #b07a1c;
+  --highlight-soft: rgba(233, 169, 58, 0.18);
+  --on-highlight: #2e1c00;
+  --success: #3f9e6e;
+  --on-success: #ffffff;
+  --focus: #b04a40;
+  --halftone: radial-gradient(transparent, transparent);
+  --bg-art:
+    radial-gradient(900px 600px at 100% 0%, rgba(233, 169, 58, 0.22), transparent 60%),
+    radial-gradient(800px 600px at 0% 100%, rgba(226, 102, 90, 0.14), transparent 60%),
+    linear-gradient(180deg, #fcf2e6, #f8e8d6);
+  --grain-opacity: 0.05;
+  --vignette: none;
+  --cardback-a: #e2665a;
+  --cardback-b: #d65a4e;
+  --cardback-ink: rgba(255, 250, 243, 0.6);
+  --radius-xs: 10px;
+  --radius-sm: 14px;
+  --radius-btn: 20px;
+  --radius: 26px;
+  --radius-lg: 32px;
+  --border-w: 0px;
+  --border-color: transparent;
+  --shadow-sm: 0 6px 12px -6px rgba(84, 52, 38, 0.35);
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 14px 30px -16px rgba(84, 52, 38, 0.35);
+  --shadow-pop: 0 24px 50px -20px rgba(84, 52, 38, 0.45);
+  --btn-depth: 5px;
+  --tilt: 0.3deg;
+  --font-display: 'Bricolage Grotesque', 'Inter', system-ui, sans-serif;
+  --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-type: 'Inter', system-ui, sans-serif;
+  --display-weight: 800;
+  --display-transform: none;
+  --display-tracking: -0.02em;
+  --av-ink: #3b2620;
+}

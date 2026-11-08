@@ -1,0 +1,134 @@
+/* Mugshot card: lined lineup backdrop + ink name plate */
+.ptile-wrap { position: relative; animation: paper-in 0.5s var(--ease-out) both; }
+.ptile-wrap:nth-child(3n + 1) { --rot: -1.2; }
+.ptile-wrap:nth-child(3n + 2) { --rot: 0.8; }
+.ptile-wrap:nth-child(3n) { --rot: -0.4; }
+.ptile {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  border-radius: var(--radius);
+  background: var(--paper);
+  border: var(--border-w) solid var(--border-color);
+  box-shadow: var(--shadow-card);
+  color: var(--text);
+  text-align: center;
+  overflow: hidden;
+  font: inherit;
+  transform: rotate(calc(var(--tilt) * var(--rot, 0)));
+  transition: transform 0.18s var(--spring), box-shadow 0.18s, background 0.18s;
+}
+[data-theme='midnight'] .ptile, [data-theme='cozy'] .ptile { padding-top: 12px; }
+button.ptile:hover:not(:disabled) { transform: rotate(0) translate(-1px, -2px); }
+button.ptile:active:not(:disabled) { transform: translate(3px, 3px); box-shadow: 2px 2px 0 var(--ink); }
+button.ptile:disabled { opacity: 0.6; }
+.ptile.is-selected { box-shadow: 0 0 0 3px var(--siren), var(--shadow-card); transform: rotate(-2deg) translateY(-3px); }
+.ptile.is-away { opacity: 0.6; filter: grayscale(0.7); }
+.ptile__photo { display: grid; place-items: center; padding: 10px 6px 6px; border-bottom: var(--border-w) solid var(--border-color); }
+[data-theme='midnight'] .ptile__photo, [data-theme='cozy'] .ptile__photo { background: none; border: 0; }
+.ptile__disc { width: 72px; height: 72px; display: grid; place-items: center; }
+[data-theme='midnight'] .ptile__disc, [data-theme='cozy'] .ptile__disc { border-radius: 50%; padding: 6px; background: color-mix(in srgb, var(--pc) 22%, transparent); }
+.ptile__plate { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 6px 7px; background: var(--ink); color: var(--news); min-height: 38px; justify-content: center; }
+[data-theme='midnight'] .ptile__plate, [data-theme='cozy'] .ptile__plate { background: none; color: var(--text); }
+.ptile-wrap--sm .ptile__disc { width: 50px; height: 50px; }
+.ptile__name {
+  font-family: var(--font-display);
+  font-weight: var(--display-weight);
+  text-transform: var(--display-transform);
+  letter-spacing: 0.03em;
+  font-size: 18px;
+  line-height: 1.05;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.ptile-wrap--sm .ptile__name { font-size: 15px; }
+.ptile__you {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 1px 5px;
+  background: var(--news);
+  color: var(--ink);
+}
+.ptile__sub { font-family: var(--font-type); font-size: 12px; color: #f6f2ea; }
+[data-theme='midnight'] .ptile__sub, [data-theme='cozy'] .ptile__sub { color: var(--text-faint); }
+.ptile__crown {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--news);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+}
+.ptile__badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--success);
+  color: var(--on-success);
+  border: 2px solid var(--ink);
+  animation: pop-in 0.4s var(--spring) both;
+}
+.ptile__away { position: absolute; top: 40%; left: 50%; translate: -50% 0; font-family: var(--font-display); font-size: 16px; letter-spacing: 0.1em; padding: 0 6px; border: 3px solid var(--ink); background: var(--paper); transform: rotate(-10deg); text-transform: uppercase; }
+.ptile__stamp {
+  position: absolute;
+  top: 34%;
+  left: -2px;
+  right: -2px;
+  padding: 0 4px;
+  border: 3px solid var(--siren);
+  color: var(--siren);
+  font-size: 19px;
+  letter-spacing: 0.08em;
+  background: color-mix(in srgb, var(--paper) 85%, transparent);
+  --stamp-rot: -12deg;
+  animation: stamp-slam 0.45s var(--slam) both;
+  pointer-events: none;
+}
+.ptile__kick {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 3px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  z-index: 2;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+.ptile__kick:hover { background: var(--siren); color: #fff; }
+
+.ptiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 16px 12px; }
+.ptiles--sm { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 10px; }
+@media (max-width: 380px) { .ptiles { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 10px; } }
+.ptile__alias { font-family: var(--font-type); font-size: 11px; color: #f6f2ea; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-theme='midnight'] .ptile__alias, [data-theme='cozy'] .ptile__alias { color: var(--text-faint); }
+
+/* in another app (texting) but still in the round */
+.ptile.is-texting .ptile__disc { opacity: 0.8; }
+.ptile__presence { position: absolute; top: 6px; left: 6px; z-index: 2; }

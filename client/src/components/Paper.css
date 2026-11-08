@@ -1,0 +1,32 @@
+/* Incoming reaction stamps */
+.rstamps { position: fixed; inset: 0; pointer-events: none; z-index: 70; overflow: hidden; }
+.rstamp {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  animation: rstamp-life 2.8s ease forwards;
+}
+.rstamp__mark { font-size: clamp(30px, 9vw, 46px); border-width: 5px; box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.18); }
+.rstamp__who {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px 2px 3px;
+  background: var(--ink);
+  color: var(--news);
+  font-family: var(--font-type);
+  font-size: 12px;
+  animation: fade-in 0.2s ease 0.3s both;
+}
+[data-theme='midnight'] .rstamp__who { background: var(--surface-3); color: var(--text); }
+@keyframes rstamp-life {
+  0%, 78% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-10px); }
+}
+/* the previous floating-emoji layer (Overlays.tsx) is superseded by stamps */
+.floaters { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .rstamp { animation: none; }
+}

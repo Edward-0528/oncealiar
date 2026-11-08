@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "types": ["node"],
+    "baseUrl": "./",
+    "paths": {
+      "@oncealiar/shared": ["../../shared/src/index.ts"]
+    }
+  },
+  "include": ["./*.tsx", "./*.ts", "../../client/src/components/avatars/*.tsx", "../../client/src/components/avatars/index.ts"],
+  "exclude": ["../../client/src/components/avatars/Gallery.tsx"]
+}

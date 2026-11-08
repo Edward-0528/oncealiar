@@ -1,27 +1,38 @@
 {
   "name": "once-a-liar-monorepo",
   "private": true,
-  "workspaces": ["client", "server", "shared"],
+  "workspaces": [
+    "client",
+    "server",
+    "shared"
+  ],
   "scripts": {
     "build": "npm --workspace shared run build && npm --workspace server run build && npm --workspace client run build",
-  "dev": "concurrently \"npm:dev:server\" \"npm:dev:client\"",
-  "dev:lan": "concurrently \"npm:dev:server\" \"npm --workspace client run dev:host\"",
+    "dev": "concurrently \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:lan": "concurrently \"npm:dev:server\" \"npm --workspace client run dev:host\"",
     "dev:client": "npm --workspace client run dev",
     "dev:server": "npm --workspace server run dev",
-  "typecheck": "npm -ws run typecheck",
-  "test": "vitest run",
-  "test:watch": "vitest",
-  "coverage": "vitest run --coverage"
+    "typecheck": "npm --workspace shared run build && npm -ws run typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage",
+    "build:server": "npm --workspace shared run build && npm --workspace server run build",
+    "start": "NODE_ENV=production node server/dist/index.js",
+    "bots": "npm --workspace server run bots --",
+    "assets": "npm --workspace shared run build && tsx --tsconfig tools/assets/tsconfig.json tools/assets/export-characters.tsx"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "@testing-library/jest-dom": "^6.4.2",
+    "@testing-library/react": "^14.2.1",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/node": "^20.11.30",
     "concurrently": "^8.2.2",
+    "jsdom": "^24.0.0",
+    "sharp": "^0.35.5",
+    "socket.io-client": "^4.7.5",
     "typescript": "^5.4.0",
-  "@types/node": "^20.11.30",
-  "vitest": "^1.6.0",
-  "@testing-library/react": "^14.2.1",
-  "@testing-library/jest-dom": "^6.4.2",
-  "@testing-library/user-event": "^14.5.2",
-  "jsdom": "^24.0.0",
-  "socket.io-client": "^4.7.5"
+    "vitest": "^1.6.0",
+    "tsx": "^4.7.0"
   }
 }

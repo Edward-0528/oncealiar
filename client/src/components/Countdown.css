@@ -1,0 +1,49 @@
+.ring { position: relative; display: grid; place-items: center; flex-shrink: 0; }
+.ring > svg { position: absolute; inset: 0; }
+.ring__track { stroke: var(--manila); }
+.ring__bar { stroke: var(--ink); transition: stroke-dashoffset 0.25s linear, stroke 0.3s; }
+[data-theme='midnight'] .ring__bar, [data-theme='cozy'] .ring__bar { stroke: var(--highlight); }
+.ring--urgent .ring__bar { stroke: var(--siren); }
+.ring--urgent { animation: shake 0.5s ease-in-out infinite; }
+.ring__inner { position: relative; display: grid; place-items: center; }
+.ring__secs {
+  position: absolute;
+  right: -12px;
+  bottom: -6px;
+  z-index: 2;
+  min-width: 46px;
+  height: 40px;
+  padding: 0 8px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-xs);
+  background: var(--ink);
+  color: var(--news);
+  font-family: var(--font-type);
+  font-size: 22px;
+  border: 3px solid var(--paper);
+  box-shadow: var(--shadow-sm);
+  font-variant-numeric: tabular-nums;
+  transform: rotate(calc(var(--tilt) * 3));
+}
+[data-theme='midnight'] .ring__secs, [data-theme='cozy'] .ring__secs { background: var(--highlight); color: var(--on-highlight); border-color: var(--bg); }
+.ring--urgent .ring__secs { background: var(--siren); color: #fff; }
+
+.timer-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  border-radius: var(--radius-xs);
+  background: var(--ink);
+  color: var(--news);
+  font-family: var(--font-type);
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
+  border: var(--border-w) solid var(--ink);
+  box-shadow: 3px 3px 0 var(--siren);
+}
+[data-theme='midnight'] .timer-pill, [data-theme='cozy'] .timer-pill { background: var(--surface-2); color: var(--text); box-shadow: none; }
+.timer-pill__dot { width: 10px; height: 10px; border-radius: 50%; background: var(--siren); animation: blink 1s infinite; }
+.timer-pill--urgent { background: var(--siren); color: #fff; animation: shake 0.6s ease-in-out infinite; box-shadow: 3px 3px 0 var(--ink); }
+.timer-pill--urgent .timer-pill__dot { background: #fff; }

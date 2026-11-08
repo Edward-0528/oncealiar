@@ -1,12 +1,47 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="tabloid-spy">
   <head>
     <meta charset="utf-8" />
-    <title>Once A Liar</title>
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+    <title>Once a Liar — the party game where someone's lying</title>
+    <meta name="description" content="A real-time social deduction party game. Everyone gets the secret word except the liar — give clues, argue, vote, and unmask them. Free, no app install: just phones and a room code." />
+    <meta name="theme-color" content="#FFE14D" />
+    <meta name="color-scheme" content="light" />
+    <meta name="format-detection" content="telephone=no" />
+
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Once a Liar" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Once a Liar" />
+    <meta property="og:title" content="You've been invited to Once a Liar 🕵️" />
+    <meta property="og:description" content="One of us is lying. Tap to join the game on your phone — no app needed." />
+    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Once a Liar" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="You've been invited to Once a Liar 🕵️" />
+    <meta name="twitter:description" content="One of us is lying. Tap to join — no app needed." />
+    <meta name="twitter:image" content="/og-image.png" />
+
+    <!-- fonts are imported by src/styles/tokens.css; warm up the connection early -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <style>
+      /* paint the brand colour before JS/CSS arrive so a QR scan never flashes white */
+      html, body { background: #ffe14d; color: #111; margin: 0; }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>Once a Liar needs JavaScript to run.</noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

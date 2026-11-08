@@ -1,0 +1,57 @@
+.tgrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.tgrid__cell {
+  min-height: 52px;
+  padding: 4px 2px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  color: var(--text);
+  font-weight: 600;
+  font-size: clamp(11px, 3.2vw, 16px);
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+  animation: pop-in 0.35s var(--spring) both;
+}
+[data-theme='midnight'] .tgrid__cell, [data-theme='cozy'] .tgrid__cell { border: 0; background: var(--surface-2); }
+.tgrid--compact .tgrid__cell { min-height: 38px; font-size: clamp(11px, 3vw, 13px); }
+/* the codeword: circled in red pen */
+.tgrid__cell.is-secret {
+  position: relative;
+  font-weight: 700;
+  z-index: 1;
+}
+.tgrid__cell.is-secret::after {
+  content: '';
+  position: absolute;
+  inset: -5px -3px;
+  border: 3px solid var(--siren);
+  border-radius: 50%;
+  transform: rotate(-4deg);
+  pointer-events: none;
+  animation: circle-draw 0.5s var(--ease-out) both 0.35s;
+}
+[data-theme='midnight'] .tgrid__cell.is-secret { background: var(--highlight); color: var(--on-highlight); }
+@keyframes circle-draw { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+button.tgrid__cell { cursor: pointer; transition: transform 0.15s var(--spring), background 0.15s; min-height: 56px; }
+button.tgrid__cell:hover { background: var(--manila); }
+button.tgrid__cell:active { transform: scale(0.94); }
+button.tgrid__cell.is-selected {
+  background: var(--ink);
+  color: var(--news);
+  transform: scale(1.05) rotate(-1.5deg);
+  box-shadow: 3px 3px 0 var(--siren);
+}
+[data-theme='midnight'] button.tgrid__cell.is-selected { background: var(--accent); color: var(--on-accent); }
+.tgrid--scan .tgrid__cell { animation: pop-in 0.35s var(--spring) both, scan 3.2s ease-in-out infinite; animation-delay: 0s, calc(var(--i) * 0.2s); }
+@keyframes scan {
+  0%, 12%, 100% { background: var(--paper); }
+  6% { background: var(--hl); }
+}
+@media (min-width: 900px) {
+  .tgrid { gap: 10px; }
+  .tgrid__cell { min-height: 68px; font-size: 18px; }
+}

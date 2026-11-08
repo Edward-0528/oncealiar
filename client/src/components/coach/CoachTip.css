@@ -1,0 +1,44 @@
+.coach-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 10px 8px 10px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--highlight-soft);
+  border: var(--border-w) solid var(--border-color);
+  color: var(--text);
+  text-align: left;
+  animation: rise-in 0.35s var(--ease-out) both;
+}
+.coach-tip__icon { font-size: 18px; line-height: 1.35; }
+.coach-tip__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.coach-tip__text { margin: 0; font-size: 14px; line-height: 1.4; font-weight: 600; }
+.coach-tip__off {
+  align-self: flex-start;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--text-faint);
+  font: inherit;
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.coach-tip__close {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.coach-tip__close:hover { background: var(--line); }
+.coach-tip__close:focus-visible, .coach-tip__off:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .coach-tip { animation: none; } }
