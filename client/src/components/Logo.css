@@ -1,0 +1,16 @@
+.logo { display: flex; align-items: center; gap: 12px; }
+.logo--lg { flex-direction: column; gap: 6px; }
+.logo__text { display: flex; flex-direction: column; align-items: flex-start; line-height: 0.86; }
+.logo--lg .logo__text { align-items: center; }
+.logo__once { font-size: 0.32em; color: var(--text-dim); letter-spacing: 0.04em; font-weight: 700; }
+.logo__liar {
+  font-size: 1em;
+  color: var(--text);
+  position: relative;
+  text-shadow: 0 4px 0 var(--accent-deep);
+}
+.logo--lg { font-size: clamp(72px, 22vw, 128px); }
+.logo--sm { font-size: 26px; }
+.logo--sm .logo__liar { text-shadow: none; }
+.logo--lg .logo__liar { transform: rotate(-3deg); }
+.logo--lg .mask-mark { animation: bob 3s ease-in-out infinite; }

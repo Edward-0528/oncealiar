@@ -6,16 +6,17 @@
   "scripts": {
     "predev": "npm --workspace ../shared run build || true",
     "dev": "vite",
-  "dev:host": "vite --host",
-    "build": "tsc -p tsconfig.json && vite build",
+    "dev:host": "vite --host",
+    "build": "tsc -p tsconfig.json --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@oncealiar/shared": "file:../shared",
+    "qrcode.react": "^4.2.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-  "socket.io-client": "^4.7.5",
-  "@oncealiar/shared": "file:../shared"
+    "socket.io-client": "^4.7.5"
   },
   "devDependencies": {
     "@types/react": "^18.2.21",

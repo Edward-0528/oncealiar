@@ -1,0 +1,20 @@
+.mockbar {
+  position: fixed;
+  left: 8px;
+  top: calc(64px + env(safe-area-inset-top));
+  opacity: 0.9;
+  z-index: 95;
+  font: 600 12px/1.2 ui-monospace, Menlo, monospace;
+  color: #111;
+}
+.mockbar summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #ffe500;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+.mockbar__body { margin-top: 6px; padding: 10px; border-radius: 10px; background: #fff; display: grid; gap: 6px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35); }
+.mockbar__body label { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+.mockbar__body select { font: inherit; color: #111; background: #f3f3f3; border: 1px solid #ccc; border-radius: 6px; padding: 4px; }
