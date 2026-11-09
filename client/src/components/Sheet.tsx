@@ -13,6 +13,20 @@ interface Props {
   hideTitle?: boolean;
 }
 
+/**
+ * Page scroll lock shared by every open sheet. A counter (not "remember the
+ * previous value") so overlapping sheets — e.g. the profile editor opened on top
+ * of How to Play — can close in any order without leaving the page stuck unscrollable.
+ */
+let scrollLocks = 0;
+function lockScroll() {
+  if (scrollLocks++ === 0) document.body.style.overflow = 'hidden';
+}
+function unlockScroll() {
+  scrollLocks = Math.max(0, scrollLocks - 1);
+  if (scrollLocks === 0) document.body.style.overflow = '';
+}
+
 /** Accessible bottom sheet (phones) / centered modal (desktop). */
 export function Sheet({ open, onClose, title, children, footer, variant = 'sheet', hideTitle }: Props) {
   const id = useId();
@@ -43,12 +57,11 @@ export function Sheet({ open, onClose, title, children, footer, variant = 'sheet
       }
     };
     document.addEventListener('keydown', onKey);
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    lockScroll();
     return () => {
       clearTimeout(t);
       document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prevOverflow;
+      unlockScroll();
       lastFocus.current?.focus?.();
     };
   }, [open, onClose]);
