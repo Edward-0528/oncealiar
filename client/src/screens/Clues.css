@@ -7,6 +7,10 @@
   gap: 12px;
   overflow-x: auto;
   scrollbar-width: none;
+  /* stay exactly screen-wide and scroll inside, never widen the page */
+  align-self: stretch;
+  min-width: 0;
+  max-width: calc(100% + 32px);
 }
 .turn-strip::-webkit-scrollbar { display: none; }
 .turn-strip__item {

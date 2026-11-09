@@ -5,6 +5,10 @@
 
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 html, body, #root { min-height: 100%; }
+/* safety net: decorative bits (stamps, tilted cards, scraps) must never make the
+   page scroll sideways on phones. `clip` (unlike `hidden`) keeps vertical scroll
+   and position: sticky working. */
+html, body { overflow-x: clip; }
 
 body {
   margin: 0;
