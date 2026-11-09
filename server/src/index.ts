@@ -8,7 +8,10 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const isProd = process.env.NODE_ENV === 'production';
 const clientDist = process.env.CLIENT_DIST ?? path.resolve(here, '../../client/dist');
 
+const PORT = Number(process.env.PORT) || 3001;
 const { httpServer, close } = createApp({
+  // in-lobby bots connect back to this same process
+  selfUrl: process.env.SELF_URL ?? `http://127.0.0.1:${PORT}`,
   packs: PACKS,
   premiumCodes: parsePremiumCodes(process.env.PREMIUM_CODES),
   clientDist: isProd ? clientDist : null,
@@ -18,7 +21,6 @@ const { httpServer, close } = createApp({
 if (process.env.CLIENT_ORIGIN) console.log(`CORS: allowing ${process.env.CLIENT_ORIGIN}`);
 if (Number(process.env.SIMULATE_COLD_START_MS) > 0) console.log(`Simulating a ${process.env.SIMULATE_COLD_START_MS} ms cold start`);
 
-const PORT = Number(process.env.PORT) || 3001;
 httpServer.listen(PORT, () => {
   console.log(`Once a Liar server listening on :${PORT}${isProd ? ` (serving ${clientDist})` : ''}`);
 });

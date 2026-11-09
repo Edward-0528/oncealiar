@@ -58,6 +58,7 @@ export interface GameStore {
     updateProfile: (p: PlayerProfile) => void;
     updateSettings: (patch: Partial<GameSettings>) => void;
     kick: (id: PlayerID) => void;
+    addBot: () => void;
     start: () => void;
     ready: () => void;
     /** briefing tutorial: "I'm ready" (sets your Player.ready; the game starts once everyone is) */
@@ -329,6 +330,10 @@ export function GameProvider({ transport, children }: { transport: Transport; ch
           if (!res.ok) toast(res.error, 'error');
         }),
       kick: (id) => t.emit('player:kick', id),
+      addBot: () =>
+        t.emit('room:addBot', (res) => {
+          if (!res.ok) toast(res.error, 'error');
+        }),
       start: () =>
         t.emit('game:start', (res) => {
           if (!res.ok) toast(res.error, 'error');

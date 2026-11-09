@@ -58,6 +58,7 @@ export function PlayerTile({ player, isYou, badge, selected, onClick, onKick, di
           <span className="ptile__name">
             {player.name}
             {isYou && <span className="ptile__you">you</span>}
+            {player.isBot && <span className="ptile__you ptile__bot">bot</span>}
           </span>
           {alias && <span className="ptile__alias">{alias}</span>}
           {sub && <span className="ptile__sub">{sub}</span>}

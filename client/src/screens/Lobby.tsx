@@ -120,7 +120,14 @@ export function Lobby() {
               onKick={isHost && p.id !== you.playerId ? () => setKickTarget(p) : undefined}
             />
           ))}
-          {Array.from({ length: need }, (_, i) => (
+          {isHost && players.length < s.maxPlayers && (
+            <button type="button" className="lobby__addbot" onClick={() => actions.addBot()}>
+              <span className="lobby__addbot-plus" aria-hidden="true">+</span>
+              <span className="lobby__addbot-t">Add a bot</span>
+              <span className="lobby__addbot-sub">for testing</span>
+            </button>
+          )}
+          {Array.from({ length: Math.max(0, need - (isHost ? 1 : 0)) }, (_, i) => (
             <div key={`empty-${i}`} className="lobby__empty" aria-hidden="true">
               <span className="lobby__empty-q">?</span>
               <span className="lobby__empty-t">Wanted</span>

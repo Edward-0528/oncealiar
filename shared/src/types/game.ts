@@ -42,6 +42,8 @@ export interface PlayerProfile {
 
 export interface Player extends PlayerProfile {
   id: PlayerID; // stable id (NOT the socket id)
+  /** a test bot the host added from the lobby (plays randomly, knows nothing extra) */
+  isBot?: boolean;
   score: number;
   connected: boolean;
   /** online: here and looking at the app. away: app in background or socket briefly
@@ -271,6 +273,8 @@ export interface ClientToServerEvents {
   'profile:update': (profile: PlayerProfile) => void;
   'settings:update': (patch: Partial<GameSettings>, ack?: Ack) => void; // host only, lobby only
   'player:kick': (playerId: PlayerID) => void; // host only
+  /** host only, lobby only: add a bot player (for testing with fewer phones) */
+  'room:addBot': (ack?: Ack) => void;
   'game:start': (ack?: Ack) => void; // host only
   'role:ready': () => void; // during role-reveal
   'briefing:ready': () => void; // during briefing: "I get it" (uses Player.ready)

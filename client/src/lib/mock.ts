@@ -561,6 +561,10 @@ export function createMockTransport(phaseParam: string, params: URLSearchParams,
           if (s) Object.assign(s.settings, a[0]);
           ack?.({ ok: true });
           break;
+        case 'room:addBot':
+          targetPlayers = Math.min(s?.settings.maxPlayers ?? 12, targetPlayers + 1);
+          ack?.({ ok: true });
+          break;
         case 'player:kick':
           if (s) s.players = s.players.filter((p) => p.id !== a[0]);
           targetPlayers = Math.max(2, targetPlayers - 1);
