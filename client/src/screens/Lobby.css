@@ -14,6 +14,7 @@
   border: var(--border-w) solid var(--border-color);
   box-shadow: var(--shadow-pop);
   border-radius: var(--radius);
+  container-type: inline-size;
   rotate: calc(var(--tilt) * -0.8);
   animation: paper-in 0.55s var(--ease-out) both;
 }
@@ -21,7 +22,7 @@
 [data-theme='midnight'] .lobby__extra, [data-theme='cozy'] .lobby__extra { display: none; }
 .lobby__label { grid-area: label; font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
 .lobby__label b { font-family: var(--font-type); font-weight: 400; letter-spacing: 0; text-transform: none; font-size: 14px; }
-.lobby__code { grid-area: code; display: flex; gap: 8px; font-size: clamp(54px, 17vw, 96px); line-height: 1; }
+.lobby__code { grid-area: code; display: flex; gap: 8px; min-width: 0; font-size: clamp(44px, 25cqi, 104px); line-height: 1; }
 .lobby__code span {
   flex: 1;
   display: inline-grid;
@@ -41,7 +42,7 @@
   0% { transform: translateY(-40px) rotate(calc(var(--r, 0deg) * 4)) scale(1.3); opacity: 0; }
   100% { transform: rotate(var(--r, 0deg)); opacity: 1; }
 }
-.lobby__btns { grid-area: btns; display: flex; flex-direction: column; gap: 12px; align-items: stretch; align-self: center; }
+.lobby__btns { grid-area: btns; display: flex; flex-direction: column; gap: 12px; align-items: stretch; align-self: center; min-width: 0; }
 .lobby__qr {
   grid-area: qr;
   width: clamp(110px, 30vw, 170px);
@@ -112,10 +113,9 @@
   .lobby__mast { grid-area: mast; }
   .lobby__mast .masthead__title { font-size: 64px; }
   .lobby__coach { grid-area: coach; }
-  .lobby__invite { grid-area: invite; grid-template-columns: 1fr; grid-template-areas: 'label' 'code' 'qr' 'btns'; padding: 24px; }
-  .lobby__code { font-size: 104px; }
-  .lobby__btns { flex-direction: row; }
-  .lobby__btns > * { flex: 1; }
+  .lobby__invite { grid-area: invite; grid-template-columns: minmax(0, 1fr); grid-template-areas: 'label' 'code' 'qr' 'btns'; padding: 24px; }
+  .lobby__btns { flex-direction: row; flex-wrap: wrap; }
+  .lobby__btns > * { flex: 1 1 auto; justify-content: center; }
   .lobby__qr { width: 100%; max-width: 240px; justify-self: center; }
   .lobby__players { grid-area: players; }
   .lobby__settings { grid-area: settings; }
@@ -126,5 +126,4 @@
 }
 @media (min-width: 1500px) {
   .screen--wide.lobby { max-width: 1400px; }
-  .lobby__code { font-size: 130px; }
 }
