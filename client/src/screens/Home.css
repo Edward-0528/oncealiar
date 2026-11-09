@@ -64,3 +64,5 @@
 @media (prefers-reduced-motion: reduce) {
   .home__rejoin-live { animation: none; }
 }
+
+.home__account { align-self: flex-end; cursor: pointer; }

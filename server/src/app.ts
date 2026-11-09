@@ -7,6 +7,7 @@ import { Server } from 'socket.io';
 import { AWAY_GRACE_MS, type ClientToServerEvents, type ServerToClientEvents, type WordPack } from '@oncealiar/shared';
 import { RoomManager, type RoomManagerOptions, type SocketData } from './rooms.js';
 import { normalizeCode } from './validation.js';
+import { bearer } from './accounts.js';
 
 export interface AppOptions extends Omit<RoomManagerOptions, 'packs'> {
   packs: WordPack[];
@@ -95,6 +96,37 @@ export function createApp(opts: AppOptions) {
     if (wait > 0) setTimeout(reply, wait).unref();
     else reply();
   });
+
+  // ───────────── accounts + purchases (all optional) ─────────────
+  const accounts = opts.accounts ?? null;
+  app.get('/api/config', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.json(accounts ? accounts.publicConfig() : { accounts: false, purchase: false });
+  });
+  if (accounts) {
+    // Stripe signs the raw body, so this route must not go through a JSON parser
+    app.post('/api/stripe/webhook', express.raw({ type: '*/*', limit: '256kb' }), async (req, res) => {
+      const out = await accounts.handleStripeWebhook(Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0), req.header('stripe-signature'));
+      res.status(out.status).json({ message: out.message });
+    });
+    app.post('/api/checkout', async (req, res) => {
+      const user = await accounts.verifyToken(bearer(req.header('authorization')) ?? '');
+      if (!user) return res.status(401).json({ ok: false, error: 'Please sign in first' });
+      if (await accounts.hasPremium(user.id)) return res.status(409).json({ ok: false, error: 'You already own the Party Pass' });
+      try {
+        res.json({ ok: true, url: await accounts.createCheckout(user) });
+      } catch (e) {
+        res.status(502).json({ ok: false, error: e instanceof Error ? e.message : 'Could not start checkout' });
+      }
+    });
+    app.get('/api/me', async (req, res) => {
+      res.setHeader('Cache-Control', 'no-store');
+      const user = await accounts.verifyToken(bearer(req.header('authorization')) ?? '');
+      if (!user) return res.status(401).json({ ok: false, error: 'Please sign in again' });
+      const [premium, history] = await Promise.all([accounts.hasPremium(user.id), accounts.history(user.id)]);
+      res.json({ ok: true, email: user.email, premium, history });
+    });
+  }
 
   const clientDist = opts.clientDist;
   if (clientDist && fs.existsSync(path.join(clientDist, 'index.html'))) {
