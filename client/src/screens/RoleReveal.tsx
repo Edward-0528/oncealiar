@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useGame, usePlayers, useTopic } from '../state/GameProvider';
 import { TopicGrid } from '../components/TopicGrid';
 import { Avatar } from '../components/Avatar';
@@ -37,6 +37,12 @@ export function RoleReveal() {
   const [sticky, setSticky] = useState(false);
   const [seen, setSeen] = useState(false);
   const downAt = useRef(0);
+  const footRef = useRef<HTMLDivElement>(null);
+  // once the file has been read and closed, bring "Briefing received" into view:
+  // on a 6.3" phone the card pushes it below the fold
+  useEffect(() => {
+    if (seen && !revealed) footRef.current?.scrollIntoView?.({ block: 'end', behavior: 'smooth' });
+  }, [seen, revealed]);
   if (!game || !you) return null;
   const liar = you.role === 'liar';
   const readyCount = players.filter((p) => p.ready).length;
@@ -187,7 +193,7 @@ export function RoleReveal() {
 
       <p className="reveal__burn type">{revealed && !sticky ? 'This file self-destructs when you let go.' : revealed ? 'Tap the file to close it.' : seen ? 'File sealed. Hold it to peek again.' : 'Make sure nobody is reading over your shoulder.'}</p>
 
-      <div className="reveal__foot">
+      <div className="reveal__foot" ref={footRef}>
         <button
           className={`btn btn--lg btn--block ${me?.ready ? 'btn--success' : 'btn--primary'}`}
           disabled={!seen || me?.ready}
