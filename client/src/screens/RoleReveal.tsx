@@ -7,27 +7,8 @@ import { haptic } from '../lib/haptics';
 import { sfx } from '../lib/sound';
 import { AVATAR_INFO, SCORE, type AvatarId } from '@oncealiar/shared';
 import { CoachTip } from '../components/coach/CoachTip';
-import { Stamp, Redacted } from '../components/Paper';
+import { Stamp, Redacted, Fingerprint } from '../components/Paper';
 import './RoleReveal.css';
-
-function Fingerprint() {
-  return (
-    <svg viewBox="0 0 64 64" width="74" height="74" aria-hidden="true" className="rcard__print">
-      {[6, 11, 16, 21, 26].map((r, i) => (
-        <path
-          key={r}
-          d={`M${32 - r} ${38 + i} a${r} ${r + 4} 0 0 1 ${r * 2} 0`}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.6"
-          strokeLinecap="round"
-          strokeDasharray={i % 2 ? '10 4' : '18 5'}
-        />
-      ))}
-      <path d="M32 40 v14 M24 44 q0 10 4 14 M40 44 q0 10 -4 14" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />
-    </svg>
-  );
-}
 
 export function RoleReveal() {
   const { game, you, actions } = useGame();

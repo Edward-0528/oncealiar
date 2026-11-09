@@ -5,13 +5,15 @@ import './mechanics.css';
  * Why a player scored this round, as small chips ("+1 Spotted the Spy").
  * Place in Results next to each player's score delta (or just for you).
  * Renders "No points" for an empty breakdown; nothing on old results without one.
+ * `practice`: the practice round's points (shown, not counted) render as dashed chips.
  */
-export function ScoreBreakdown({ result, playerId, compact }: { result: RoundResult; playerId: PlayerID; compact?: boolean }) {
+export function ScoreBreakdown({ result, playerId, compact, practice }: { result: RoundResult; playerId: PlayerID; compact?: boolean; practice?: boolean }) {
   const lines = result.scoreBreakdown?.[playerId];
   if (!lines) return null;
   if (!lines.length) return compact ? null : <span className="mx-score mx-score--none">No points</span>;
   return (
-    <span className="mx-score">
+    <span className={`mx-score ${practice ? 'mx-score--practice' : ''}`}>
+      {practice && !compact && <span className="mx-score__practice">Practice — not counted</span>}
       {lines.map((l) => (
         <span key={l.rule} className="mx-score__chip">
           <b>+{l.points}</b> {scoreLabel(l.rule)}

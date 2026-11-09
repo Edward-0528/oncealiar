@@ -11,7 +11,7 @@ import type { AwardId, GameSettings, ScoreRuleId } from './types/game.js';
 export const AWAY_TURN_MS = 20_000;
 /** Sudden-death re-vote between tied players. */
 export const RUNOFF_MS = 10_000;
-/** Timer multiplier for the warm-up round (first round played in a room). */
+/** Timer multiplier for the warm-up/practice round (first round played in a room; its points don't count). */
 export const WARMUP_FACTOR = 1.5;
 /** Two Spies are recommended from this many players (allowed from 7). */
 export const TWO_SPIES_FROM = 8;
@@ -70,6 +70,7 @@ export const RULES_ONE_LINERS = {
   tie: 'Tied vote? A 10-second sudden-death re-vote between the tied players; still tied, the Spy slips away.',
   lastGuess: 'A caught Spy can still win by guessing the codeword from the grid.',
   earlyLock: 'The Spy may lock in a guess early for +1 — it becomes their final answer if caught.',
+  practice: 'The first round in a room is a practice round: longer timers, and its points are shown but don\'t count.',
   away: 'Stepped away to answer a text? You keep your seat for 2 minutes; your turn waits up to 20 seconds.'
 } as const;
 

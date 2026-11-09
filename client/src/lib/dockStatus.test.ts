@@ -74,4 +74,11 @@ describe('deriveDockStatus', () => {
       expect(deriveDockStatus(g, you('a', { role: 'liar', secretWord: null }), 3000)).toEqual(deriveDockStatus(g, you('a'), 3000));
     }
   });
+
+  it('briefing: asks you to watch + tap ready, then waits on the rest (offline skipped)', () => {
+    const ps = [player('a', { ready: false }), player('b', { ready: false }), player('c', { ready: false, presence: 'offline' })];
+    expect(deriveDockStatus(state('briefing', ps), you('a'), null)).toEqual({ kind: 'you', text: 'Watch the demo, then tap I’m ready', time: null });
+    ps[0].ready = true;
+    expect(deriveDockStatus(state('briefing', ps), you('a'), null)).toMatchObject({ kind: 'waiting', text: 'B' });
+  });
 });

@@ -203,6 +203,7 @@ export class RoomManager {
     });
 
     socket.on('game:start', (ack) => act((g, pid, now) => g.start(pid, now), ack));
+    socket.on('briefing:ready', () => act((g, pid, now) => g.briefingReady(pid, now)));
     socket.on('role:ready', () => act((g, pid, now) => g.ready(pid, now)));
     socket.on('clue:submit', (text) => act((g, pid, now) => g.submitClue(pid, text, now)));
     socket.on('clue:done', () => act((g, pid, now) => g.clueDone(pid, now)));

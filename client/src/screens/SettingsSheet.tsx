@@ -86,7 +86,8 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
           {!canTwoLiars && <small className="faint">Two spies unlocks at 7+ players.</small>}
         </div>
 
-        <Toggle label="Warm-up round" hint="First round gets 50% more time on every timer." checked={s.warmupRound} onChange={(v) => set({ warmupRound: v })} />
+        <Toggle label="Tutorial before first game" hint="A 40-second animated how-to on every phone. Starts when everyone taps ready." checked={s.briefing} onChange={(v) => set({ briefing: v })} />
+        <Toggle label="Practice round" hint="First round: 50% more time, points don't count." checked={s.warmupRound} onChange={(v) => set({ warmupRound: v })} />
         <Toggle label="Spy sees the topic" hint="Classic rules. Turn off for hard mode." checked={s.liarSeesTopic} onChange={(v) => set({ liarSeesTopic: v })} />
         <Toggle label="Family friendly" hint="Hides mature packs." checked={s.familyFriendly} onChange={(v) => set({ familyFriendly: v, packIds: v ? s.packIds.filter((id) => !game.packs.find((p) => p.id === id)?.mature) : s.packIds })} />
 

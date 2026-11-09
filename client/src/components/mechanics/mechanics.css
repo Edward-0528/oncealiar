@@ -89,6 +89,8 @@
   border-radius: var(--radius-xs);
 }
 .mx-score__chip b { font-weight: 400; background: var(--hl); color: #111; padding: 0 2px; }
+.mx-score--practice .mx-score__chip { border-style: dashed; opacity: 0.85; }
+.mx-score__practice { font-family: var(--font-type); font-size: var(--fs-meta); color: var(--text-faint); align-self: center; }
 .mx-score--none { font-family: var(--font-type); font-size: var(--fs-meta); color: var(--text-faint); }
 .mx-notes { list-style: none; margin: 0; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; font-family: var(--font-type); font-size: var(--fs-meta); color: var(--text); border-left: 4px solid var(--siren); background: var(--paper); }
 .mx-notes li::before { content: '▸ '; color: var(--siren-ink); }

@@ -5,7 +5,7 @@
  *   BOTS_URL=http://host:3001 npm run bots -- ABCD 3
  *   BOTS_AWAY=1 npm run bots -- ABCD 5   # bots sometimes "answer a text" (tab hidden 5–25s)
  *
- * Bots ready up, take their clue turns (spoken: end turn; typed: random word),
+ * Bots confirm the briefing (tutorial) after 1–3s, ready up, take their clue turns (spoken: end turn; typed: random word),
  * vote for a random player (only tied players during a sudden-death re-vote),
  * sometimes lock in an early guess as the Spy, and guess a random grid word
  * when they're a caught Spy without a lock-in.
@@ -71,6 +71,10 @@ function spawn(i: number) {
       return;
     }
     switch (r.phase) {
+      case 'briefing':
+        acted = key;
+        later(() => s.emit('briefing:ready'), 1000, 3000);
+        break;
       case 'role-reveal':
         acted = key;
         later(() => s.emit('role:ready'));

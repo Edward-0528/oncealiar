@@ -3,10 +3,11 @@
  * state, and the fake server keeps playing (bots get ready, give clues, vote,
  * react) so the full flow can be reviewed without the real backend.
  *
- * Params: mock=home|profile|lobby|role-reveal|clues|discussion|voting|liar-guess|results|game-over
+ * Params: mock=home|profile|lobby|briefing|role-reveal|clues|discussion|voting|liar-guess|results|game-over
  *         role=liar|truth  host=0|1  clue=spoken|typed  n=3..12  caught=0|1  topic=0 (liar doesn't see topic)
  *         runoff=1 (voting opens as a sudden-death re-vote)  away=1 (one bot keeps stepping away)
- *         warmup=0 (no warm-up round)
+ *         demo=2.3 (briefing: freeze the tutorial on scene 2, step 3)
+ *         warmup=0 (no warm-up / practice round)  briefing=0 (no tutorial before the first game)
  *
  * Mirrors the server rules in shared/src/rules.ts: presence (away/offline),
  * sudden-death re-vote, Spy early lock-in, score breakdown, awards.
@@ -106,6 +107,7 @@ export function createMockTransport(phaseParam: string, params: URLSearchParams,
   const forceRunoff = params.get('runoff') === '1';
   const flakyBot = params.get('away') === '1';
   const warmupOn = params.get('warmup') !== '0';
+  const briefingOn = params.get('briefing') !== '0';
   const subs = new Set<(e: TransportEvent) => void>();
 
   let st: PublicGameState | null = null;
@@ -148,12 +150,13 @@ export function createMockTransport(phaseParam: string, params: URLSearchParams,
   };
   const player = (id: PlayerID) => S().players.find((p) => p.id === id)!;
 
-  const warm = () => warmupOn && gamesStarted <= 1 && S().round.number === 1;
+  const warm = () => warmupOn && S().settings.warmupRound && gamesStarted <= 1 && S().round.number === 1;
   function setPhase(phase: Phase, seconds: number | null) {
     S().round.phase = phase;
     S().round.phaseEndsAt = seconds ? Date.now() + seconds * 1000 * (warm() ? WARMUP_FACTOR : 1) : null;
     S().round.runoff = phase === 'voting' ? runoff : null;
     S().round.warmup = warm();
+    S().round.practice = warm();
     phaseStartedAt = Date.now();
   }
   const toast = (message: string) => send({ type: 'toast', message });
@@ -164,7 +167,7 @@ export function createMockTransport(phaseParam: string, params: URLSearchParams,
     st = {
       code,
       players,
-      settings: { ...DEFAULT_SETTINGS, clueMode, packIds: ['starter'], liarSeesTopic: params.get('topic') !== '0' },
+      settings: { ...DEFAULT_SETTINGS, clueMode, packIds: ['starter'], liarSeesTopic: params.get('topic') !== '0', warmupRound: warmupOn, briefing: briefingOn },
       round: { number: 0, phase: 'lobby', phaseEndsAt: null, serverNow: Date.now(), topic: null, turnOrder: [], currentTurn: 0, clues: [], result: null },
       packs: PACKS,
       premium: false
@@ -202,6 +205,17 @@ export function createMockTransport(phaseParam: string, params: URLSearchParams,
     const liar = liarIds.includes(ME);
     me = { ...me, role: liar ? 'liar' : 'truth-teller', secretWord: liar ? null : secret, myVote: null };
     setPhase('role-reveal', null);
+  }
+
+  /** first game in a room (settings.briefing): everyone watches the tutorial, then role-reveal */
+  function startBriefing() {
+    const s = S();
+    s.players.forEach((p) => {
+      p.ready = false;
+      p.hasVoted = false;
+    });
+    s.round = { number: 0, phase: 'briefing', phaseEndsAt: null, serverNow: Date.now(), topic: null, turnOrder: [], currentTurn: 0, clues: [], result: null };
+    setPhase('briefing', null);
   }
 
   function botClue(id: PlayerID) {
@@ -317,7 +331,7 @@ export function createMockTransport(phaseParam: string, params: URLSearchParams,
       }
       breakdown[p.id] = lines;
       deltas[p.id] = lines.reduce((a, l) => a + l.points, 0);
-      p.score += deltas[p.id];
+      if (!s.round.practice) p.score += deltas[p.id]; // practice round: shown, not counted
     });
     r.scoreDeltas = deltas;
     r.scoreBreakdown = breakdown;
@@ -366,6 +380,10 @@ export function createMockTransport(phaseParam: string, params: URLSearchParams,
     if (phase === 'home' || phase === 'profile') return;
     lobby('MASK', iAmHost, phase === 'lobby' ? Math.max(2, n - 2) : n);
     if (phase === 'lobby') return;
+    if (phase === 'briefing') {
+      gamesStarted = 1;
+      return startBriefing();
+    }
     startRound(phase === 'game-over' ? 5 : 1);
     const s = S();
     s.players.forEach((p, i) => (p.score = [7, 4, 9, 3, 6, 2, 5, 1, 8, 0, 3, 2][i] ?? 0));
@@ -423,6 +441,18 @@ export function createMockTransport(phaseParam: string, params: URLSearchParams,
       s.players.push(makePlayer(s.players.length, profile));
       phaseStartedAt = Date.now();
       changed = true;
+    }
+    if (r.phase === 'briefing') {
+      // bots finish the tutorial one by one over a few seconds; the game waits for EVERYONE (you too)
+      const unready = s.players.filter((p) => p.id !== ME && !p.ready && p.presence !== 'offline');
+      if (unready.length && since > 1500 && Math.random() < 0.25) {
+        pick(unready).ready = true;
+        changed = true;
+      }
+      if (s.players.every((p) => p.ready || p.presence === 'offline')) {
+        startRound(1);
+        changed = true;
+      }
     }
     if (r.phase === 'role-reveal') {
       const unready = s.players.filter((p) => p.id !== ME && !p.ready);
@@ -542,11 +572,16 @@ export function createMockTransport(phaseParam: string, params: URLSearchParams,
           }
           gamesStarted++;
           stats = {};
-          startRound(1);
+          // mirror the server: the room's first game opens with the briefing tutorial
+          if (s?.settings.briefing && gamesStarted === 1) startBriefing();
+          else startRound(1);
           ack?.({ ok: true });
           break;
         case 'role:ready':
           if (s) player(ME).ready = true;
+          break;
+        case 'briefing:ready':
+          if (s && s.round.phase === 'briefing') player(ME).ready = true;
           break;
         case 'clue:submit':
           if (s) {

@@ -87,7 +87,17 @@ describe('socket integration', () => {
     // non-host can't start
     expect((await emitAck<any>((ack) => b.emit('game:start', ack))).ok).toBe(false);
     expect((await emitAck<any>((ack) => a.emit('game:start', ack))).ok).toBe(true);
+    // first game in the room: group briefing until everyone confirms (no host skip)
+    await until(() => [a, b, c].every((x) => x.state?.round.phase === 'briefing'));
+    expect(a.state!.round.phaseEndsAt).toBeNull();
+    a.emit('phase:skip');
+    a.emit('briefing:ready');
+    b.emit('briefing:ready');
+    await until(() => a.state!.players.filter((p) => p.ready).length === 2);
+    expect(a.state!.round.phase).toBe('briefing');
+    c.emit('briefing:ready');
     await until(() => [a, b, c].every((x) => x.state?.round.phase === 'role-reveal'));
+    expect(a.state!.round.practice).toBe(true);
     const all = [a, b, c];
     const liar = all.find((x) => x.view!.role === 'liar')!;
     const truthers = all.filter((x) => x !== liar);
@@ -125,9 +135,10 @@ describe('socket integration', () => {
     expect(r.secretWord).toBe(secret);
     expect(r.liarCaught).toBe(true);
     expect(r.winner).toBe('truth-tellers');
-    expect(a.state!.players.find((p) => p.id === liarId)!.score).toBe(0);
-    for (const t of truthers)
-      expect(a.state!.players.find((p) => p.id === t.view!.playerId)!.score).toBe(SCORE['agent-team-win'] + SCORE['agent-spotted-spy']);
+    // practice round: points are shown but not added
+    expect(a.state!.round.practice).toBe(true);
+    for (const t of truthers) expect(r.scoreDeltas[t.view!.playerId]).toBe(SCORE['agent-team-win'] + SCORE['agent-spotted-spy']);
+    expect(a.state!.players.every((p) => p.score === 0)).toBe(true);
 
     for (const x of all) expect(x.leaks).toEqual([]);
 
@@ -184,7 +195,8 @@ describe('socket integration', () => {
       await until(() => pres(joins[0].playerId).presence === 'online');
       b.emit('presence', 'bogus' as any); // ignored
 
-      // start; role-reveal doesn't wait for an away player
+      // start (briefing off); role-reveal doesn't wait for an away player
+      expect((await emitAck<any>((ack) => h.emit('settings:update', { briefing: false }, ack))).ok).toBe(true);
       expect((await emitAck<any>((ack) => h.emit('game:start', ack))).ok).toBe(true);
       await until(() => h.state!.round.phase === 'role-reveal');
       d.emit('presence', 'hidden');

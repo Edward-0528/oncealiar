@@ -3,6 +3,7 @@ import { RULES_ONE_LINERS, SCORE, SCORE_RULES } from '@oncealiar/shared';
 import { Sheet } from './Sheet';
 import { Avatar } from './Avatar';
 import { Icon } from './Icon';
+import { BRIEFING_SECONDS, GameDemo } from './demo/GameDemo';
 import './HowToPlay.css';
 
 function MiniCard({ liar, word = 'Pineapple' }: { liar?: boolean; word?: string }) {
@@ -93,6 +94,8 @@ const STEPS: { title: string; body: string; tail?: string; art: React.ReactNode 
 
 export function HowToPlay({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [idx, setIdx] = useState(0);
+  // the animated group-briefing demo, rewatchable any time (mounted only while shown)
+  const [demo, setDemo] = useState(false);
   const track = useRef<HTMLDivElement>(null);
   const go = (i: number) => {
     const n = Math.max(0, Math.min(STEPS.length - 1, i));
@@ -101,22 +104,11 @@ export function HowToPlay({ open, onClose }: { open: boolean; onClose: () => voi
     if (el) el.scrollTo({ left: n * el.clientWidth, behavior: 'smooth' });
   };
   const last = idx === STEPS.length - 1;
-  return (
-    <Sheet
-      open={open}
-      onClose={onClose}
-      title="How to play"
-      footer={
-        <>
-          <button className="btn btn--ghost btn--sm" onClick={() => go(idx - 1)} disabled={idx === 0} aria-label="Previous step">
-            <Icon name="left" size={18} /> Back
-          </button>
-          <button className="btn btn--primary btn--sm" onClick={() => (last ? onClose() : go(idx + 1))}>
-            {last ? "Let's play" : 'Next'} {!last && <Icon name="right" size={18} />}
-          </button>
-        </>
-      }
-    >
+  const steps = (
+    <>
+      <button className="btn btn--secondary btn--block htp-watch" onClick={() => setDemo(true)}>
+        <Icon name="eye" size={18} /> Watch the {BRIEFING_SECONDS}-second demo
+      </button>
       <div
         className="htp-track"
         ref={track}
@@ -141,6 +133,34 @@ export function HowToPlay({ open, onClose }: { open: boolean; onClose: () => voi
           <button key={s.title} role="tab" aria-selected={i === idx} aria-label={`Step ${i + 1}`} className={`htp-dot ${i === idx ? 'is-on' : ''}`} onClick={() => go(i)} />
         ))}
       </div>
+    </>
+  );
+  return (
+    <Sheet
+      open={open}
+      onClose={() => {
+        setDemo(false);
+        onClose();
+      }}
+      title="How to play"
+      footer={
+        demo ? (
+          <button className="btn btn--primary btn--sm" onClick={() => setDemo(false)}>
+            <Icon name="left" size={18} /> Back to the steps
+          </button>
+        ) : (
+          <>
+            <button className="btn btn--ghost btn--sm" onClick={() => go(idx - 1)} disabled={idx === 0} aria-label="Previous step">
+              <Icon name="left" size={18} /> Back
+            </button>
+            <button className="btn btn--primary btn--sm" onClick={() => (last ? onClose() : go(idx + 1))}>
+              {last ? "Let's play" : 'Next'} {!last && <Icon name="right" size={18} />}
+            </button>
+          </>
+        )
+      }
+    >
+      {demo ? <GameDemo className="htp-demo" /> : steps}
     </Sheet>
   );
 }

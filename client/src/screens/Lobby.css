@@ -97,6 +97,7 @@
   z-index: 3;
 }
 .lobby__hint { font-size: var(--fs-meta); font-weight: 600; }
+.lobby__tutorial { margin: -4px 0 0; font-family: var(--font-type); font-size: var(--fs-meta); }
 .lobby__start .btn:disabled { opacity: 1; --btn-bg: var(--paper); --btn-fg: var(--text-faint); border-style: dashed; }
 
 /* Laptop / TV: cast-friendly room code */

@@ -176,6 +176,7 @@ export function Results() {
   const liarWins = result.winner === 'liar';
   const last = game.round.number >= game.settings.roundsPerGame;
   const ranked = [...players].sort((a, b) => b.score - a.score);
+  const practice = !!game.round.practice;
   const showSummary = stage === 'winner' || stage === 'scores';
   const many = liars.length > 1;
   const headline: [string, string] = liarWins
@@ -249,15 +250,22 @@ export function Results() {
               <h2 className="display h3" id="scoreboard-h">
                 The scoreboard
               </h2>
+              {practice && (
+                <p className="scores__practice">
+                  <span className="scores__practice-tag">Practice — not counted</span> This round shows how scoring works. Its points don’t count toward anyone’s total.
+                </p>
+              )}
               <ol className="scores__list">
                 {ranked.map((p, i) => {
                   const d = result.scoreDeltas[p.id] ?? 0;
+                  // practice round: the breakdown is shown, but totals don't move
+                  const gained = practice ? 0 : d;
                   const spy = liarIds.includes(p.id);
                   return (
                     <li
                       key={p.id}
                       className={`scores__row ${p.id === you.playerId ? 'is-you' : ''} ${spy ? 'is-spy' : ''}`}
-                      style={{ animationDelay: `${staggerDelay(i, 70)}ms`, ['--to' as string]: `${(p.score / top) * 100}%`, ['--d' as string]: `${400 + staggerDelay(i, 90)}ms`, ['--k' as string]: p.score > 0 ? Math.max(0, (p.score - d) / p.score) : 0 }}
+                      style={{ animationDelay: `${staggerDelay(i, 70)}ms`, ['--to' as string]: `${(p.score / top) * 100}%`, ['--d' as string]: `${400 + staggerDelay(i, 90)}ms`, ['--k' as string]: p.score > 0 ? Math.max(0, (p.score - gained) / p.score) : 0 }}
                     >
                       <span className="scores__name">
                         {p.name}
@@ -267,13 +275,15 @@ export function Results() {
                         <span className="scores__bar" />
                       </span>
                       <span className="scores__nums">
-                        <span className={`scores__delta ${d > 0 ? '' : 'is-zero'}`}>+{d}</span>
+                        <span className={`scores__delta ${d > 0 ? '' : 'is-zero'} ${practice ? 'is-practice' : ''}`} aria-label={practice ? `+${d} (practice, not counted)` : undefined}>
+                          +{d}
+                        </span>
                         <span className="scores__total display" aria-label={`${p.score} points`}>
-                          <AnimatedNumber from={p.score - d} to={p.score} delay={500 + staggerDelay(i, 90)} />
+                          <AnimatedNumber from={p.score - gained} to={p.score} delay={500 + staggerDelay(i, 90)} />
                         </span>
                       </span>
                       <span className="scores__why">
-                        <ScoreBreakdown result={result} playerId={p.id} compact />
+                        <ScoreBreakdown result={result} playerId={p.id} compact practice={practice} />
                       </span>
                     </li>
                   );
