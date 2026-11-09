@@ -12,6 +12,33 @@ export interface AppOptions extends Omit<RoomManagerOptions, 'packs'> {
   packs: WordPack[];
   /** absolute path to the built client; served with SPA fallback when set and present */
   clientDist?: string | null;
+  /**
+   * Origins allowed to call this server cross-origin (the static client site in a split deploy).
+   * Entries may contain `*` wildcards (`https://oncealiar-*.onrender.com`). Empty/undefined = allow any.
+   */
+  clientOrigins?: string[];
+  /**
+   * Dev aid: pretend to be a sleeping free-tier instance for this long after boot —
+   * `/healthz` is held until "awake" and Socket.IO handshakes are refused, like a cold start.
+   */
+  coldStartMs?: number;
+}
+
+/** Parse `CLIENT_ORIGIN` (comma-separated, `*` wildcards allowed). */
+export function parseOrigins(raw: string | undefined): string[] {
+  return (raw ?? '')
+    .split(',')
+    .map((s) => s.trim().replace(/\/+$/, ''))
+    .filter(Boolean);
+}
+
+/** Build an origin check: true when allowed. An empty list allows everything (dev / single-service). */
+export function originMatcher(origins: string[] | undefined): (origin: string | undefined) => boolean {
+  const list = origins ?? [];
+  if (list.length === 0 || list.includes('*')) return () => true;
+  const patterns = list.map((o) => new RegExp('^' + o.split('*').map((part) => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('[a-z0-9-]*') + '$', 'i'));
+  // no Origin header = same-origin navigation, curl, health checks: always fine
+  return (origin) => !origin || patterns.some((re) => re.test(origin));
 }
 
 /**
@@ -39,9 +66,34 @@ const ROOM_PATH = /^\/[A-Za-z]{4}\/?$/;
 export function createApp(opts: AppOptions) {
   const app = express();
   app.disable('x-powered-by');
-  app.use(cors());
+  const allowOrigin = originMatcher(opts.clientOrigins);
+  const corsOrigin = (origin: string | undefined, cb: (err: Error | null, allow?: boolean) => void) => cb(null, allowOrigin(origin));
+  app.use(cors({ origin: corsOrigin }));
+
+  let awakeAt = Date.now() + Math.max(0, opts.coldStartMs ?? 0);
+  const asleepFor = () => Math.max(0, awakeAt - Date.now());
+  if (opts.coldStartMs) {
+    // review aid (only with SIMULATE_COLD_START_MS): "nap" again without losing rooms, so the
+    // invite-link path (new visitor → wake screen → lobby) can be tried against a live room.
+    app.get('/__nap', (req, res) => {
+      const asked = Number(req.query.ms);
+      const ms = Math.min(Math.max(req.query.ms !== undefined && Number.isFinite(asked) ? asked : opts.coldStartMs!, 0), 10 * 60_000);
+      awakeAt = Date.now() + ms;
+      res.setHeader('Cache-Control', 'no-store');
+      res.json({ ok: true, asleepForMs: ms });
+    });
+  }
   app.get('/healthz', (_req, res) => {
-    res.json({ ok: true, rooms: manager.rooms.size, uptime: Math.round(process.uptime()) });
+    const reply = () => {
+      if (res.writableEnded || res.destroyed) return;
+      // never cached by the browser, the service worker or a CDN: it's the wake-up probe
+      res.setHeader('Cache-Control', 'no-store');
+      res.json({ ok: true, rooms: manager.rooms.size, uptime: Math.round(process.uptime()) });
+    };
+    // simulated cold start: hold the request like Render's proxy does while the instance boots
+    const wait = asleepFor();
+    if (wait > 0) setTimeout(reply, wait).unref();
+    else reply();
   });
 
   const clientDist = opts.clientDist;
@@ -79,7 +131,9 @@ export function createApp(opts: AppOptions) {
 
   const httpServer = http.createServer(app);
   const io = new Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>(httpServer, {
-    cors: { origin: '*' },
+    cors: { origin: corsOrigin },
+    // simulated cold start: refuse handshakes until "awake" (the client keeps retrying)
+    allowRequest: (_req, cb) => cb(null, asleepFor() === 0),
     ...SOCKET_SERVER_OPTIONS
   });
   const manager = new RoomManager(io, opts);

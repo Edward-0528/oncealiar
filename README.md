@@ -24,6 +24,25 @@ npm run dev
 
 Visit: http://localhost:5173
 
+Single-process production build (Express serves the client + game server on :3001):
+
+```bash
+npm run build && npm start
+```
+
+## Deploy (Render, free)
+
+`render.yaml` is a Render Blueprint: a free **static site** for the client (CDN, never sleeps) plus a
+free **web service** for the Socket.IO server (sleeps when idle; the app shows a friendly
+"waking up" screen during the ~30–60 s cold start).
+
+1. Push to GitHub.
+2. Render dashboard → **New + → Blueprint** → pick this repo → **Apply**.
+3. Share the static site URL (`https://oncealiar….onrender.com`).
+
+Full guide (env vars, CORS, free-plan limits, custom domains, simulating a cold start locally):
+[docs/deploy-render.md](docs/deploy-render.md).
+
 ## Game Core (MVP)
 1. Lobby: players join, choose name + avatar (emoji for now)
 2. Host starts a round
@@ -56,6 +75,9 @@ Visit: http://localhost:5173
 ## Scripts
 - `npm run dev` – run all dev services
 - `npm run build` – builds all packages
+- `npm run build:server` / `npm run build:client` – build one side (used by Render)
+- `npm start` – production server (serves `client/dist` too when present)
+- `npm test` / `npm run typecheck`
 
 ---
 

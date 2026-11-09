@@ -4,6 +4,7 @@ import type { ConnStatus, RoomPeek, Transport, TransportEvent } from './transpor
 import { ConnectionKeeper, type SocketLike } from './connection';
 import { loadSession, type Session } from './storage';
 import { roomFromLocation } from './roomCode';
+import { SERVER_ORIGIN } from './serverUrl';
 
 /** Socket.IO manager tuning for phones on flaky networks. */
 export const SOCKET_OPTIONS: Partial<ManagerOptions & SocketOptions> = {
@@ -33,7 +34,8 @@ export function sessionToResume(loc: Pick<Location, 'pathname' | 'search'> = win
 }
 
 export function createSocketTransport(): Transport {
-  const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(SOCKET_OPTIONS);
+  // same origin unless the client was built for a split deploy (see serverUrl.ts)
+  const socket: Socket<ServerToClientEvents, ClientToServerEvents> = SERVER_ORIGIN ? io(SERVER_ORIGIN, SOCKET_OPTIONS) : io(SOCKET_OPTIONS);
   const raw = socket as unknown as {
     emit: (ev: string, ...a: unknown[]) => void;
     on: (ev: string, fn: (...a: any[]) => void) => void;

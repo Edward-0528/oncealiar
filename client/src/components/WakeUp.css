@@ -1,0 +1,117 @@
+/* ==========================================================================
+   Wake-up screen ("STOP THE PRESSES!") — shown while the free-tier game server boots.
+   Tabloid Spy styling via tokens only, so alternate themes still work.
+   ========================================================================== */
+
+.wake-quiet { min-height: 60vh; }
+
+.wake { gap: 16px; padding-top: calc(14px + env(safe-area-inset-top)); animation: fade-in 0.35s ease both; }
+.wake__masthead .masthead__title { font-size: clamp(38px, 12.5vw, 60px); letter-spacing: 0.01em; }
+.wake__lead { display: flex; flex-direction: column; gap: 6px; }
+.wake__lead .h3 { line-height: 1.05; }
+.wake__explain { margin: 0; font-size: 16px; line-height: 1.45; color: var(--text-dim); }
+
+/* progress card */
+.wake__progress { position: relative; display: flex; flex-direction: column; gap: 10px; overflow: visible; }
+.wake__progress-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.wake__clock { font-size: 22px; line-height: 1; font-variant-numeric: tabular-nums; }
+.wake__status { margin: 0; min-height: 2.6em; font-size: 15px; line-height: 1.3; }
+
+.wake__bar {
+  position: relative;
+  height: 22px;
+  border: var(--border-w, 3px) solid var(--ink, var(--line-strong));
+  border-radius: var(--radius-xs);
+  background: var(--paper-2);
+  overflow: hidden;
+}
+.wake__bar--compact { height: 12px; border-width: 2px; }
+.wake__fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  background:
+    repeating-linear-gradient(-45deg, transparent 0 8px, rgba(255, 255, 255, 0.22) 8px 16px),
+    var(--accent);
+  background-size: 22.6px 22.6px, auto;
+  transition: transform 0.6s var(--ease-out);
+  animation: wake-stripes 0.9s linear infinite;
+}
+.wake__bar.is-ready .wake__fill { background: var(--success); animation: none; transition-duration: 0.25s; }
+@keyframes wake-stripes { to { background-position: 22.6px 0, 0 0; } }
+
+.wake__slow { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; }
+.wake__slow-note { font-size: 13px; }
+
+.wake__stamp {
+  --stamp-rot: -9deg;
+  position: absolute;
+  right: 8px;
+  top: -18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+  padding: 4px 14px 6px;
+  z-index: 2;
+}
+.wake--ready .wake__clock { visibility: hidden; }
+.wake__stamp small { font-family: var(--font-type); font-size: 13px; letter-spacing: 0.04em; text-transform: none; }
+
+.wake__invite { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 15px; background: var(--paper-2); }
+.wake__invite svg { flex-shrink: 0; color: var(--success); }
+
+/* rotating cameo */
+.wake__tip { position: relative; padding-top: 22px; min-height: 132px; }
+.wake__tip-tag { position: absolute; top: -12px; left: 14px; }
+.wake__tip-body { display: flex; align-items: center; gap: 14px; animation: rise-in 0.45s var(--ease-out) both; }
+.wake__tip-body .av { flex-shrink: 0; }
+.wake__tip-body p { margin: 0; font-size: 15px; line-height: 1.4; }
+
+.wake__actions { margin-top: 2px; }
+.wake__me { gap: 10px; font-size: 18px; }
+
+.wake--ready .wake__actions,
+.wake--ready .wake__tip { opacity: 0.55; transition: opacity 0.3s ease; }
+
+@media (min-width: 900px) {
+  .wake { max-width: 640px; }
+  .wake__explain { font-size: 18px; }
+}
+
+/* ---------- compact banner (server dozed off while on Home / lobby) ---------- */
+.wake-banner {
+  position: fixed;
+  top: calc(8px + env(safe-area-inset-top));
+  left: 0;
+  right: 0;
+  z-index: 96;
+  display: flex;
+  justify-content: center;
+  padding: 0 16px;
+  pointer-events: none;
+  animation: rise-in 0.35s var(--ease-out) both;
+}
+.wake-banner__card {
+  pointer-events: auto;
+  width: 100%;
+  max-width: 528px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 14px 12px;
+  background: var(--surface);
+  color: var(--text);
+  border: var(--border-w, 3px) solid var(--ink, var(--line-strong));
+  border-radius: var(--radius);
+  box-shadow: 4px 4px 0 var(--accent);
+}
+.wake-banner__row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.wake-banner__title { font-size: 20px; line-height: 1; }
+.wake-banner .wake__clock { font-size: 16px; }
+.wake-banner__text { margin: 0; font-size: 14px; line-height: 1.35; }
+.wake-banner__retry { align-self: flex-start; margin-top: 4px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .wake__fill { transition: none; }
+}

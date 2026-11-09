@@ -17,6 +17,7 @@
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
     "build:server": "npm --workspace shared run build && npm --workspace server run build",
+    "build:client": "npm --workspace client run build",
     "start": "NODE_ENV=production node server/dist/index.js",
     "bots": "npm --workspace server run bots --",
     "assets": "npm --workspace shared run build && tsx --tsconfig tools/assets/tsconfig.json tools/assets/export-characters.tsx"

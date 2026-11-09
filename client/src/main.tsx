@@ -1,3 +1,6 @@
+// FIRST: fire the /healthz wake-up probe before anything else loads (a sleeping free-tier
+// server starts booting right now, while the rest of the bundle evaluates and React mounts)
+import { bootMonitor } from './lib/bootWake';
 // global styles first so component CSS (same specificity) wins the cascade
 import './styles/tokens.css';
 import './styles/base.css';
@@ -23,7 +26,7 @@ if (mockPhase === 'characters') {
   });
 } else {
   const transportPromise: Promise<Transport> = mockPhase
-    ? import('./lib/mock').then((m) => m.createMockTransport(mockPhase, params, loadProfile()))
+    ? import('./lib/mock').then((m) => m.createMockTransport(mockPhase === 'wake' ? 'home' : mockPhase, params, loadProfile()))
     : Promise.resolve(createSocketTransport());
   void startApp(transportPromise);
 }
@@ -32,7 +35,7 @@ async function startApp(transportPromise: Promise<Transport>) {
   const transport = await transportPromise;
   createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
-      <App transport={transport} />
+      <App transport={transport} wake={bootMonitor} />
     </React.StrictMode>
   );
 }

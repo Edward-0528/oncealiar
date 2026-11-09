@@ -16,7 +16,9 @@ export default defineConfig({
       '/socket.io': {
         target: 'http://localhost:3001',
         ws: true
-      }
+      },
+      // wake-up probe (see src/lib/wake.ts)
+      '/healthz': 'http://localhost:3001'
     }
   }
 });
