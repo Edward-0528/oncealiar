@@ -1,6 +1,6 @@
 # Once A Liar
 
-Real-time social deduction party game (3-18 players) built with React + Vite (client) and Node + Socket.IO (server).
+Real-time social deduction party game (3-12 players) built with React + Vite (client) and Node + Socket.IO (server).
 
 ## Monorepo Structure
 

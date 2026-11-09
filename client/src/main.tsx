@@ -12,6 +12,8 @@ import { createSocketTransport } from './lib/socketTransport';
 import { applyTheme, loadTheme } from './lib/theme';
 import { unlockAudio } from './lib/sound';
 import { loadProfile } from './lib/profile';
+import { loadSession, loadStats } from './lib/storage';
+import { shouldShowLanding } from './lib/landing';
 
 applyTheme(loadTheme(), false);
 window.addEventListener('pointerdown', unlockAudio, { once: true });
@@ -19,7 +21,29 @@ window.addEventListener('pointerdown', unlockAudio, { once: true });
 const params = new URLSearchParams(window.location.search);
 const mockPhase = import.meta.env.DEV ? params.get('mock') : null;
 
-if (mockPhase === 'characters') {
+function showLanding(): boolean {
+  try {
+    const stats = loadStats();
+    return shouldShowLanding({
+      pathname: window.location.pathname,
+      search: window.location.search,
+      hasSession: !!loadSession(),
+      hasName: loadProfile().name.trim().length > 0,
+      hasPlayed: stats.hosted + stats.joined > 0,
+      standalone: window.matchMedia?.('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true
+    });
+  } catch {
+    return false; // when in doubt, show the app
+  }
+}
+
+if (showLanding()) {
+  // strangers on the bare domain: a static front page, no socket, no app bundle work
+  void import('./screens/Landing').then(({ Landing }) => {
+    document.title = 'Once a Liar: free party game for your phones, no app needed';
+    createRoot(document.getElementById('root')!).render(<Landing />);
+  });
+} else if (mockPhase === 'characters') {
   // dev-only character gallery: every character × mood
   void import('./components/avatars/Gallery').then(({ CharacterGallery }) => {
     createRoot(document.getElementById('root')!).render(<CharacterGallery />);
