@@ -142,12 +142,9 @@ export function LookHint() {
   const [draft, setDraft] = useState<PlayerProfile>(profile);
   if (!autoProfile || !game || !you || !me || game.round.phase !== 'lobby') return null;
 
-  const save = () => {
-    const name = draft.name.trim();
-    if (!name) return;
-    const p = { ...draft, name };
+  const save = (p: PlayerProfile) => {
     setProfile(p);
-    actions.updateProfile({ ...p, name: dedupeName(name, players.filter((x) => x.id !== me.id).map((x) => x.name)) });
+    actions.updateProfile({ ...p, name: dedupeName(p.name, players.filter((x) => x.id !== me.id).map((x) => x.name)) });
     setOpen(false);
   };
 
@@ -170,17 +167,8 @@ export function LookHint() {
           <Icon name="close" size={16} />
         </button>
       </div>
-      <Sheet
-        open={open}
-        onClose={() => setOpen(false)}
-        title="Your disguise"
-        footer={
-          <button className="btn btn--primary btn--block" onClick={save} disabled={!draft.name.trim()}>
-            Looks good
-          </button>
-        }
-      >
-        <ProfileEditor value={draft} onChange={setDraft} />
+      <Sheet open={open} onClose={() => setOpen(false)} title="Your disguise">
+        <ProfileEditor value={draft} onChange={setDraft} ctaLabel="Looks good" onSubmit={save} />
       </Sheet>
     </>
   );

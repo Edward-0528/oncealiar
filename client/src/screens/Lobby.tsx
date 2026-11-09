@@ -218,26 +218,17 @@ export function Lobby() {
         <p className="dim">They’ll be sent back to the home screen.</p>
       </Sheet>
 
-      <Sheet
-        open={editMe}
-        onClose={() => setEditMe(false)}
-        title="Edit your look"
-        footer={
-          <button
-            className="btn btn--primary"
-            disabled={!draft.name.trim()}
-            onClick={() => {
-              const p = { ...draft, name: draft.name.trim() };
-              setProfile(p);
-              actions.updateProfile(p);
-              setEditMe(false);
-            }}
-          >
-            Save
-          </button>
-        }
-      >
-        <ProfileEditor value={draft} onChange={setDraft} />
+      <Sheet open={editMe} onClose={() => setEditMe(false)} title="Edit your look">
+        <ProfileEditor
+          value={draft}
+          onChange={setDraft}
+          ctaLabel="Save"
+          onSubmit={(p) => {
+            setProfile(p);
+            actions.updateProfile(p);
+            setEditMe(false);
+          }}
+        />
       </Sheet>
     </main>
   );

@@ -1,4 +1,4 @@
-import { AVATARS, AVATAR_INFO, PLAYER_COLORS, isAvatarId, type PlayerProfile } from '@oncealiar/shared';
+import { AVATARS, AVATAR_INFO, PLAYER_COLORS, isAvatarId, type AvatarId, type PlayerProfile } from '@oncealiar/shared';
 import { KEYS, loadJSON, saveJSON } from './storage';
 
 const pick = <T,>(arr: readonly T[]) => arr[Math.floor(Math.random() * arr.length)];
@@ -32,12 +32,17 @@ const ADJECTIVES = [
   'Velvet', 'Midnight', 'Undercover', 'Suspicious', 'Smooth', 'Shifty', 'Masked', 'Rogue', 'Double',
   'Agent', 'Captain', 'Sir', 'Lady', 'Dodgy', 'Innocent', 'Totally Real', 'Cheeky', 'Sus'
 ];
-const AVATAR_NOUN: Record<string, string> = {
-  chancla: 'Chancla', agent: 'Fedora', pigeon: 'Pigeon', duck: 'Duck', paparazzi: 'Paparazzi', cat: 'Cat',
-  gnome: 'Gnome', ghost: 'Ghost', pina: 'Piña', nopal: 'Nopal',
-  abuela: 'Abuela', tio: 'Tío', cuchara: 'Cuchara', tia: 'Tía', villana: 'Villana', primo: 'Primo',
-  shoephone: 'Shoe', pen: 'Pen', briefcase: 'Briefcase', magnifier: 'Lupa'
+const AVATAR_NOUN: Record<AvatarId, string> = {
+  chancla: 'Chancla', duck: 'Duck', cow: 'Cow', goldfish: 'Bubbles', agent: 'Fedora', pigeon: 'Pigeon',
+  paparazzi: 'Paparazzi', cat: 'Cat', gnome: 'Gnome', ghost: 'Ghost', pina: 'Piña', nopal: 'Nopal',
+  abuela: 'Abuela', tio: 'Tío', tia: 'Tía', villana: 'Villana', primo: 'Primo',
+  penguin: 'Waiter', raccoon: 'Raccoon', bear: 'Tourist', flamingo: 'Lamp', giraffe: 'Stranger',
+  shoephone: 'Shoe', magnifier: 'Lupa'
 };
+const NOUNS = new Set<string>([...Object.values(AVATAR_NOUN), 'Spy']);
+
+/** the one-word stage name for a character ("Chancla", "Bubbles"…), used in codenames and CTAs */
+export const avatarNoun = (avatar: string): string => (isAvatarId(avatar) ? AVATAR_NOUN[avatar] : 'Spy');
 
 export const isPremiumAvatar = (id: string) => isAvatarId(id) && AVATAR_INFO[id].premium;
 
@@ -52,10 +57,28 @@ const norm = (s: string) => s.trim().toLowerCase();
 /** "Sneaky Fox" — a fun codename that matches the avatar, ≤16 chars, not in `taken`. */
 export function codename(avatar: string, taken: Iterable<string> = [], rng: () => number = Math.random): string {
   const used = new Set([...taken].map(norm));
-  const noun = AVATAR_NOUN[avatar] ?? 'Spy';
+  const noun = avatarNoun(avatar);
   const options = ADJECTIVES.map((a) => `${a} ${noun}`).filter((n) => n.length <= NAME_MAX && !used.has(norm(n)));
   if (options.length) return options[Math.floor(rng() * options.length)];
   return dedupeName(`Agent ${noun}`, used);
+}
+
+/** true for names `codename()` produces ("Sneaky Duck", "Agent Spy"), false for anything a person typed */
+export function isCodename(name: string): boolean {
+  const n = name.trim();
+  return ADJECTIVES.some((a) => n.startsWith(`${a} `) && NOUNS.has(n.slice(a.length + 1)));
+}
+
+/**
+ * Keep a generated codename in step with the character: "Sneaky Duck" → "Sneaky Cow".
+ * Names the player typed are left alone; empty names stay empty.
+ */
+export function retargetCodename(name: string, avatar: string, taken: Iterable<string> = [], rng: () => number = Math.random): string {
+  if (!isCodename(name)) return name;
+  const used = new Set([...taken].map(norm));
+  const adj = ADJECTIVES.find((a) => name.trim().startsWith(`${a} `))!;
+  const next = `${adj} ${avatarNoun(avatar)}`;
+  return next.length <= NAME_MAX && !used.has(norm(next)) ? next : codename(avatar, taken, rng);
 }
 
 /** "Sam" → "Sam 2" (→ "Sam 3"…) when the name is already used in the room. Case-insensitive. */

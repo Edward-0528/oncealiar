@@ -102,6 +102,12 @@ export const sfx = {
   tickUrgent: () => tone({ freq: 1500, dur: 0.06, type: 'square', gain: 0.05 }),
   whoosh: () => noise(0.35, 0.09, 300, 3200),
   flip: () => noise(0.12, 0.08, 1800, 600),
+  /** Velvet curtain: a soft low swish, then a tiny drumroll-and-ting as it reopens. */
+  curtain: () => {
+    noise(0.3, 0.06, 1600, 260, 'lowpass');
+    for (let i = 0; i < 5; i++) tone({ freq: 190, to: 150, dur: 0.05, type: 'triangle', gain: 0.035, delay: 0.3 + i * 0.035 });
+    tone({ freq: 1320, dur: 0.18, type: 'sine', gain: 0.045, delay: 0.5 });
+  },
   yourTurn: () => arp([659, 880, 1175], 0.08),
   vote: () => tone({ freq: 300, to: 180, dur: 0.12, type: 'square', gain: 0.06 }),
   reveal: () => {
