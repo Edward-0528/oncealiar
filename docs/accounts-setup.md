@@ -16,9 +16,9 @@ Code: `server/src/accounts.ts` (Supabase REST + Stripe over `fetch`, no SDKs), r
 1. Create a project (a dedicated one for this game is cleanest).
 2. Run `supabase/migrations/20261109_accounts.sql` in the SQL editor. It creates `oal_entitlements` and `oal_history` with row-level security (users can only read their own rows; the server writes with the service key).
 3. Authentication → URL Configuration: set **Site URL** to the client URL and add `https://<client>/start` to **Redirect URLs**.
-4. Authentication → Email Templates → **Magic Link**: add the code to the body so people can type it instead of tapping the link, e.g. `Your Once a Liar code: {{ .Token }}`. (The link works without this; the code field just won't have anything to enter.)
+4. Authentication → Email Templates → **Magic link or OTP**: editing templates requires custom SMTP (step 5). Until then the default email is used and people sign in with its link. Once SMTP is set, add the code to the body so people can type it, e.g. `Your Once a Liar code: {{ .Token }}`.
 5. Supabase's built-in email sender is heavily rate limited; add custom SMTP (Resend, Postmark) before launch.
-6. Server env: `SUPABASE_URL`, `SUPABASE_ANON_KEY` (publishable), `SUPABASE_SERVICE_KEY` (secret, server only, never in the client).
+6. Server env: `SUPABASE_URL`, `SUPABASE_ANON_KEY` (the publishable key, `sb_publishable_…`), `SUPABASE_SERVICE_KEY` (the secret key, `sb_secret_…`; server only, never in the client). Legacy anon/service_role JWT keys also work.
 
 ## 2. Stripe
 

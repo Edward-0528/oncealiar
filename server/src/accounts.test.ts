@@ -71,6 +71,21 @@ describe('verifyToken / hasPremium', () => {
   });
 });
 
+describe('supabase keys', () => {
+  const headersOf = async (key: string) => {
+    const { f, calls } = fakeFetch(() => []);
+    await createAccounts({ ...cfg, supabaseServiceKey: key }, f).hasPremium('u1');
+    return calls[0].init?.headers as Record<string, string>;
+  };
+  it('sends new sb_secret keys in apikey only, legacy JWT keys in both', async () => {
+    const modern = await headersOf('sb_secret_abc');
+    expect(modern.apikey).toBe('sb_secret_abc');
+    expect(modern.Authorization).toBeUndefined();
+    const legacy = await headersOf('eyJhbGciOi.payload.sig');
+    expect(legacy.Authorization).toBe('Bearer eyJhbGciOi.payload.sig');
+  });
+});
+
 describe('checkout', () => {
   it('creates a Stripe session tied to the user', async () => {
     const { f, calls } = fakeFetch(() => ({ url: 'https://checkout.stripe.com/c/1' }));

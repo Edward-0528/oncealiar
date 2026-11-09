@@ -99,7 +99,9 @@ export function createAccounts(config: AccountsConfig, fetchImpl: Fetch = fetch)
       ...init,
       headers: {
         apikey: config.supabaseServiceKey,
-        Authorization: `Bearer ${config.supabaseServiceKey}`,
+        // legacy service_role keys are JWTs and go in Authorization too; the new `sb_secret_…`
+        // keys are not JWTs and must travel in `apikey` alone
+        ...(config.supabaseServiceKey.startsWith('sb_') ? {} : { Authorization: `Bearer ${config.supabaseServiceKey}` }),
         'Content-Type': 'application/json',
         ...(init.headers as Record<string, string> | undefined)
       }
