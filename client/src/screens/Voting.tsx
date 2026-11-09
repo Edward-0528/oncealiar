@@ -77,7 +77,7 @@ export function Voting() {
                   <Avatar avatar={p.avatar} color={p.color} size="82%" label="" mood={picked ? 'sus' : 'idle'} beat={picked ? { id: 'flinch', key: p.id } : undefined} />
                 </span>
                 <span className="suspect__name">{self ? 'You' : p.name}</span>
-                <span className={`suspect__status ${p.hasVoted ? 'is-voted' : ''}`}>{p.hasVoted ? '✓ Voted' : 'Deciding'}</span>
+                <span className={`suspect__status ${p.hasVoted ? 'is-voted' : ''}`}>{p.hasVoted ? '✓ Voted' : self ? 'That’s you' : out ? 'Not in re-vote' : 'Deciding'}</span>
                 {picked && (
                   <Stamp rot={-10} slam className="suspect__stamp">
                     Suspect

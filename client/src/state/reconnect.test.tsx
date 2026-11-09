@@ -67,10 +67,10 @@ describe('reconnect indicator', () => {
     return t;
   }
 
-  it('stays invisible for a short blip', () => {
+  it('stays invisible for a very short blip', () => {
     const t = mount();
     t.push({ type: 'conn', status: 'reconnecting' });
-    act(() => vi.advanceTimersByTime(1500));
+    act(() => vi.advanceTimersByTime(300));
     t.push({ type: 'conn', status: 'connected' });
     act(() => vi.advanceTimersByTime(1000));
     expect(screen.queryByText(/reconnecting/i)).toBeNull();
@@ -78,13 +78,13 @@ describe('reconnect indicator', () => {
     expect(screen.getByTestId('room')).toHaveTextContent('ABCD'); // game state kept through the blip
   });
 
-  it('shows a calm pill after 2s, then "Back in the game!" on rejoin', () => {
+  it('shows a calm pill after 400ms that says buttons are paused, then "Back in the game!" on rejoin', () => {
     const t = mount();
     t.push({ type: 'conn', status: 'reconnecting' });
-    act(() => vi.advanceTimersByTime(2000));
-    expect(screen.getByText('Reconnecting…')).toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(400));
+    expect(screen.getByText('Reconnecting… buttons paused')).toBeInTheDocument();
     t.push({ type: 'conn', status: 'connected' });
-    expect(screen.queryByText('Reconnecting…')).toBeNull();
+    expect(screen.queryByText('Reconnecting… buttons paused')).toBeNull();
     expect(screen.getByText('Back in the game!')).toBeInTheDocument();
   });
 

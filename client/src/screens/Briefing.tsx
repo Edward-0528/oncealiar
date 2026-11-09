@@ -8,6 +8,7 @@ import { haptic } from '../lib/haptics';
 import { sfx } from '../lib/sound';
 import './RoleReveal.css';
 import './Briefing.css';
+import { ActionButton } from '../components/ActionButton';
 
 
 /**
@@ -51,13 +52,13 @@ export function Briefing() {
       <DemoDots scene={demo.scene} onGo={demo.go} />
 
       <div className="brief__foot">
-        <button
+        <ActionButton
           className={`btn btn--lg btn--block ${iAmReady ? 'btn--success' : 'btn--primary'}`}
           disabled={iAmReady}
-          onClick={() => {
+          onAct={() => {
             sfx.stamp();
             haptic('tick');
-            actions.briefingReady();
+            return actions.briefingReady();
           }}
         >
           {iAmReady ? (
@@ -67,7 +68,7 @@ export function Briefing() {
           ) : (
             'I’m ready'
           )}
-        </button>
+        </ActionButton>
         <div className="ready-row brief__ready" aria-label={`${readyCount} of ${here.length} players ready`}>
           <div className="ready-row__avs">
             {here.map((p) => (

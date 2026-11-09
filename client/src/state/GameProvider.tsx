@@ -58,20 +58,20 @@ export interface GameStore {
     updateProfile: (p: PlayerProfile) => void;
     updateSettings: (patch: Partial<GameSettings>) => void;
     kick: (id: PlayerID) => void;
-    addBot: () => void;
-    makeHost: (id: PlayerID) => void;
-    endSession: () => void;
-    start: () => void;
-    ready: () => void;
+    addBot: () => Promise<boolean>;
+    makeHost: (id: PlayerID) => Promise<boolean>;
+    endSession: () => Promise<boolean>;
+    start: () => Promise<boolean>;
+    ready: () => Promise<boolean>;
     /** briefing tutorial: "I'm ready" (sets your Player.ready; the game starts once everyone is) */
-    briefingReady: () => void;
-    submitClue: (text: string) => void;
-    clueDone: () => void;
-    skip: () => void;
-    vote: (id: PlayerID) => void;
-    guess: (word: string) => void;
-    next: () => void;
-    restart: () => void;
+    briefingReady: () => Promise<boolean>;
+    submitClue: (text: string) => Promise<boolean>;
+    clueDone: () => Promise<boolean>;
+    skip: () => Promise<boolean>;
+    vote: (id: PlayerID) => Promise<boolean>;
+    guess: (word: string) => Promise<boolean>;
+    next: () => Promise<boolean>;
+    restart: () => Promise<boolean>;
     react: (emoji: string) => void;
     unlock: (code: string) => Promise<boolean>;
   };
@@ -132,12 +132,15 @@ export function GameProvider({ transport, children }: { transport: Transport; ch
   });
 
   const gameRef = useRef(game);
+  const connRef = useRef(conn);
+  connRef.current = conn;
   const youRef = useRef(you);
   const profileRef = useRef(profile);
   gameRef.current = game;
   youRef.current = you;
   profileRef.current = profile;
   const lastReactAt = useRef(0);
+  const reactTimes = useRef<number[]>([]);
   const lastRemember = useRef({ code: '', at: 0 });
   const renamed = useRef(new Set<string>());
 
@@ -284,6 +287,27 @@ export function GameProvider({ transport, children }: { transport: Transport; ch
       return true;
     };
     const t = transport;
+    /**
+     * A game action that always answers: refuses up front while the link is down (instead of
+     * buffering a tap that may replay in the wrong phase later), waits for the server's reply,
+     * and says why when it fails. Resolves true only when the server accepted it.
+     */
+    const send = async (fire: (ack: Ack) => void): Promise<boolean> => {
+      if (t.kind === 'mock') {
+        fire(() => {});
+        return true;
+      }
+      if (connRef.current !== 'connected') {
+        toast('Reconnecting… try again in a second', 'error');
+        return false;
+      }
+      const res = await withAck<{}>(fire);
+      if (!res.ok) {
+        toast(res.error, 'error');
+        return false;
+      }
+      return true;
+    };
     const create = (p: PlayerProfile) => enter((ack) => t.emit('room:create', p, ack));
     const join = (code: string, p: PlayerProfile) => enter((ack) => t.emit('room:join', code.toUpperCase(), p, ack));
     return {
@@ -339,31 +363,19 @@ export function GameProvider({ transport, children }: { transport: Transport; ch
           if (!res.ok) toast(res.error, 'error');
         }),
       kick: (id) => t.emit('player:kick', id),
-      makeHost: (id) =>
-        t.emit('player:makeHost', id, (res) => {
-          if (!res.ok) toast(res.error, 'error');
-        }),
-      endSession: () =>
-        t.emit('room:end', (res) => {
-          if (!res.ok) toast(res.error, 'error');
-        }),
-      addBot: () =>
-        t.emit('room:addBot', (res) => {
-          if (!res.ok) toast(res.error, 'error');
-        }),
-      start: () =>
-        t.emit('game:start', (res) => {
-          if (!res.ok) toast(res.error, 'error');
-        }),
-      ready: () => t.emit('role:ready'),
-      briefingReady: () => t.emit('briefing:ready'),
-      submitClue: (text) => t.emit('clue:submit', text),
-      clueDone: () => t.emit('clue:done'),
-      skip: () => t.emit('phase:skip'),
-      vote: (id) => t.emit('vote:cast', id),
-      guess: (word) => t.emit('guess:submit', word),
-      next: () => t.emit('round:next'),
-      restart: () => t.emit('game:restart'),
+      makeHost: (id) => send((ack) => t.emit('player:makeHost', id, ack)),
+      endSession: () => send((ack) => t.emit('room:end', ack)),
+      addBot: () => send((ack) => t.emit('room:addBot', ack)),
+      start: () => send((ack) => t.emit('game:start', ack)),
+      ready: () => send((ack) => t.emit('role:ready', ack)),
+      briefingReady: () => send((ack) => t.emit('briefing:ready', ack)),
+      submitClue: (text) => send((ack) => t.emit('clue:submit', text, ack)),
+      clueDone: () => send((ack) => t.emit('clue:done', ack)),
+      skip: () => send((ack) => t.emit('phase:skip', ack)),
+      vote: (id) => send((ack) => t.emit('vote:cast', id, ack)),
+      guess: (word) => send((ack) => t.emit('guess:submit', word, ack)),
+      next: () => send((ack) => t.emit('round:next', ack)),
+      restart: () => send((ack) => t.emit('game:restart', ack)),
       unlock: async (code) => {
         const res = await withAck<{}>((ack) => t.emit('room:unlock', code.trim(), ack));
         if (!res.ok) toast(res.error, 'error');
@@ -373,6 +385,13 @@ export function GameProvider({ transport, children }: { transport: Transport; ch
       react: (emoji) => {
         const now = Date.now();
         if (now - lastReactAt.current < 350) return;
+        // same budget as the server (5 per 3s) so the sender never sees a stamp nobody else gets
+        reactTimes.current = reactTimes.current.filter((x) => now - x < 3000);
+        if (reactTimes.current.length >= 5) {
+          toast('Easy there, slow down a sec', 'info');
+          return;
+        }
+        reactTimes.current.push(now);
         lastReactAt.current = now;
         t.emit('reaction', emoji);
         if (youRef.current) addReaction(emoji, youRef.current.playerId);

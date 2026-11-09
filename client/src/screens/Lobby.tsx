@@ -17,6 +17,7 @@ import { BRIEFING_SECONDS } from '../components/demo/GameDemo';
 import { hasRoomPlayed } from '../lib/roomHistory';
 import { targetOf } from '../lib/gameEnd';
 import './Lobby.css';
+import { ActionButton } from '../components/ActionButton';
 
 export function Lobby() {
   const { game, you, actions, toast, profile, setProfile } = useGame();
@@ -39,7 +40,10 @@ export function Lobby() {
   if (!game || !you) return null;
   const s = game.settings;
   const url = inviteUrl(game.code);
-  const need = Math.max(0, s.minPlayers - players.length);
+  // the server counts only connected players, so the button must too
+  const connectedCount = players.filter((p) => p.connected).length;
+  const need = Math.max(0, s.minPlayers - connectedCount);
+  const offlineNames = players.filter((p) => !p.connected).map((p) => p.name);
   const packNames = game.packs.filter((p) => s.packIds.includes(p.id)).map((p) => `${p.emoji} ${p.name}`);
 
   const share = async () => {
@@ -124,11 +128,11 @@ export function Lobby() {
             />
           ))}
           {isHost && players.length < s.maxPlayers && (
-            <button type="button" className="lobby__addbot" onClick={() => actions.addBot()}>
+            <ActionButton className="lobby__addbot" onAct={() => actions.addBot()} pendingLabel={<span className="lobby__addbot-t">Adding…</span>}>
               <span className="lobby__addbot-plus" aria-hidden="true">+</span>
               <span className="lobby__addbot-t">Add a bot</span>
               <span className="lobby__addbot-sub">for testing</span>
-            </button>
+            </ActionButton>
           )}
           {Array.from({ length: Math.max(0, need - (isHost ? 1 : 0)) }, (_, i) => (
             <div key={`empty-${i}`} className="lobby__empty" aria-hidden="true">
@@ -184,16 +188,28 @@ export function Lobby() {
       <div className="lobby__start">
         {isHost ? (
           <>
-            <button
+            <ActionButton
               className="btn btn--primary btn--lg btn--block"
-              disabled={need > 0}
-              onClick={() => {
+              blockedReason={
+                need > 0
+                  ? offlineNames.length
+                    ? `Need ${need} more connected. Waiting on ${offlineNames.slice(0, 2).join(' & ')} to reconnect.`
+                    : `Need ${need} more suspect${need > 1 ? 's' : ''} to start`
+                  : null
+              }
+              pendingLabel="Starting…"
+              onAct={() => {
                 sfx.paper();
-                actions.start();
+                return actions.start();
               }}
             >
-              {need > 0 ? `Need ${need} more suspect${need > 1 ? 's' : ''}` : `Start game · ${players.length} players`}
-            </button>
+              {need > 0 ? `Need ${need} more suspect${need > 1 ? 's' : ''}` : `Start game · ${connectedCount} players`}
+            </ActionButton>
+            {need > 0 && offlineNames.length > 0 && (
+              <p className="action-reason" role="status">
+                {offlineNames.slice(0, 2).join(' & ')} {offlineNames.length > 1 ? 'are' : 'is'} offline. They need to reconnect before you can start.
+              </p>
+            )}
             {need === 0 && s.briefing && !hasRoomPlayed(game.code) && <p className="center lobby__tutorial">Starts with a {BRIEFING_SECONDS}-second tutorial</p>}
             <p className="center lobby__hint">
               {need > 0 ? 'Share the code. Everyone joins on their own phone.' : players.length < 5 ? 'Tip: 5–8 players is the sweet spot.' : 'Looking good. Phones out, poker faces on.'}

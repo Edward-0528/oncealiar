@@ -784,7 +784,8 @@ export class Game {
   ready(id: PlayerID, now: number): void {
     this.assertLive();
     const p = this.mustGet(id);
-    if (this.phase !== 'role-reveal' || !p.inRound) return;
+    if (this.phase !== 'role-reveal') return;
+    if (!p.inRound) throw new GameError("You joined mid-round. You'll play from the next round.");
     p.ready = true;
     this.checkAutoAdvance(now);
   }

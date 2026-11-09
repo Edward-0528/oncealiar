@@ -102,6 +102,7 @@ button.ptile:disabled { opacity: 0.6; }
   animation: stamp-slam 0.45s var(--slam) both;
   pointer-events: none;
 }
+.ptile__kick::after { content: ''; position: absolute; inset: -4px; } /* 44px tap target */
 .ptile__kick {
   position: absolute;
   top: -10px;

@@ -12,6 +12,7 @@ import { AwardsList } from '../components/mechanics';
 import { sfx } from '../lib/sound';
 import { haptic } from '../lib/haptics';
 import './GameOver.css';
+import { ActionButton } from '../components/ActionButton';
 
 /** the race bars start after the headline slam lands */
 const RACE_START_MS = 700;
@@ -122,9 +123,9 @@ export function GameOver() {
       ) : (
       <div className="stack gameover__cta">
         {isHost ? (
-          <button className="btn btn--primary btn--lg btn--block" onClick={actions.restart}>
+          <ActionButton className="btn btn--primary btn--lg btn--block" pendingLabel="Setting up…" onAct={() => actions.restart()}>
             Play again
-          </button>
+          </ActionButton>
         ) : (
           <div className="waitbar">
             <span className="waitbar__dot" aria-hidden="true" />

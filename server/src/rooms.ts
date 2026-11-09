@@ -269,15 +269,15 @@ export class RoomManager {
     });
 
     socket.on('game:start', (ack) => act((g, pid, now) => g.start(pid, now), ack));
-    socket.on('briefing:ready', () => act((g, pid, now) => g.briefingReady(pid, now)));
-    socket.on('role:ready', () => act((g, pid, now) => g.ready(pid, now)));
-    socket.on('clue:submit', (text) => act((g, pid, now) => g.submitClue(pid, text, now)));
-    socket.on('clue:done', () => act((g, pid, now) => g.clueDone(pid, now)));
-    socket.on('phase:skip', () => act((g, pid, now) => g.skipPhase(pid, now)));
-    socket.on('vote:cast', (target) => act((g, pid, now) => g.castVote(pid, target, now)));
-    socket.on('guess:submit', (word) => act((g, pid, now) => g.submitGuess(pid, word, now)));
-    socket.on('round:next', () => act((g, pid, now) => g.nextRound(pid, now)));
-    socket.on('game:restart', () => act((g, pid) => g.restart(pid)));
+    socket.on('briefing:ready', (ack) => act((g, pid, now) => g.briefingReady(pid, now), ack));
+    socket.on('role:ready', (ack) => act((g, pid, now) => g.ready(pid, now), ack));
+    socket.on('clue:submit', (text, ack) => act((g, pid, now) => g.submitClue(pid, text, now), ack));
+    socket.on('clue:done', (ack) => act((g, pid, now) => g.clueDone(pid, now), ack));
+    socket.on('phase:skip', (ack) => act((g, pid, now) => g.skipPhase(pid, now), ack));
+    socket.on('vote:cast', (target, ack) => act((g, pid, now) => g.castVote(pid, target, now), ack));
+    socket.on('guess:submit', (word, ack) => act((g, pid, now) => g.submitGuess(pid, word, now), ack));
+    socket.on('round:next', (ack) => act((g, pid, now) => g.nextRound(pid, now), ack));
+    socket.on('game:restart', (ack) => act((g, pid) => g.restart(pid), ack));
 
     socket.on('room:unlock', async (code, ack) => {
       const room = socket.data.code ? this.rooms.get(socket.data.code) : undefined;

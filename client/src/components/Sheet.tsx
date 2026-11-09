@@ -32,6 +32,10 @@ export function Sheet({ open, onClose, title, children, footer, variant = 'sheet
   const id = useId();
   const panel = useRef<HTMLDivElement>(null);
   const lastFocus = useRef<HTMLElement | null>(null);
+  // callers pass inline lambdas; keep them out of the effect deps so every parent re-render
+  // (each server push) doesn't re-run the focus/scroll-lock effect and yank focus around
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (!open) return;
@@ -41,7 +45,7 @@ export function Sheet({ open, onClose, title, children, footer, variant = 'sheet
       el?.focus();
     }, 30);
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') onCloseRef.current();
       if (e.key === 'Tab' && panel.current) {
         const f = panel.current.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), [tabindex="0"], a[href]');
         if (!f.length) return;
@@ -64,7 +68,7 @@ export function Sheet({ open, onClose, title, children, footer, variant = 'sheet
       unlockScroll();
       lastFocus.current?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
   return createPortal(

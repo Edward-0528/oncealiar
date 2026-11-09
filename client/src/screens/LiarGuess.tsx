@@ -7,6 +7,7 @@ import { Stamp } from '../components/Paper';
 import { CoachTip } from '../components/coach/CoachTip';
 import { sfx } from '../lib/sound';
 import './Phases.css';
+import { ActionButton } from '../components/ActionButton';
 
 /**
  * Calm waiting state for everyone but the Spy. No invented "is it X?" guesses, no typewriter
@@ -116,16 +117,18 @@ export function LiarGuess() {
                   <button className="btn btn--sm" onClick={() => setPick(null)}>
                     Change
                   </button>
-                  <button
+                  <ActionButton
                     className="btn btn--primary btn--sm"
-                    onClick={() => {
+                    pendingLabel="Locking…"
+                    onAct={async () => {
                       sfx.stamp();
-                      setLocked(true);
-                      actions.guess(pick);
+                      const ok = await actions.guess(pick);
+                      if (ok) setLocked(true);
+                      return ok;
                     }}
                   >
                     Lock it in
-                  </button>
+                  </ActionButton>
                 </div>
               </>
             ) : (
