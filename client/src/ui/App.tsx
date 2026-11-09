@@ -7,12 +7,14 @@ import { LookHint, NotifyPrompt, ReconnectBanner, Splash, Toasts } from '../comp
 import { useWakeLock } from '../state/hooks';
 import { roomFromLocation } from '../lib/roomCode';
 import { bumpStat } from '../lib/storage';
+import { markRoomPlayed } from '../lib/roomHistory';
 import { registerServiceWorker } from '../lib/pwa';
 import { TvView } from '../screens/TvView';
 import { MockBar } from '../components/MockBar';
 import { Home, type Intent } from '../screens/Home';
 import { ProfileScreen } from '../screens/Profile';
 import { Lobby } from '../screens/Lobby';
+import { Briefing } from '../screens/Briefing';
 import { RoleReveal } from '../screens/RoleReveal';
 import { Clues } from '../screens/Clues';
 import { Discussion } from '../screens/Discussion';
@@ -38,6 +40,11 @@ function Router() {
   useLayoutEffect(() => {
     window.scrollTo(0, 0);
   }, [phaseKey]);
+  // remember that a game has started here (the lobby only promises the tutorial before the first one)
+  const playedCode = game && game.round.phase !== 'lobby' ? game.code : null;
+  useEffect(() => {
+    if (playedCode) markRoomPlayed(playedCode);
+  }, [playedCode]);
 
   if (!game || !you) {
     if (restoring) return <Splash label="Getting you back in…" />;
@@ -50,6 +57,8 @@ function Router() {
   switch (game.round.phase) {
     case 'lobby':
       return <Lobby key={key} />;
+    case 'briefing':
+      return <Briefing key={key} />;
     case 'role-reveal':
       return <RoleReveal key={key} />;
     case 'clues':

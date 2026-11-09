@@ -16,6 +16,18 @@
  *
  * Mechanics (rules.ts): early lock-in guesses, sudden-death re-vote on ties,
  * warm-up round, score breakdown, game-over awards.
+ *
+ * Briefing (settings.briefing): the first `start` in a room enters an untimed
+ * `briefing` phase (group tutorial). It advances to role-reveal once every
+ * non-offline player (online AND away) has sent briefing:ready; offline or
+ * departed players never block it. If fewer than minPlayers non-offline players
+ * remain, the room goes back to the lobby (like an aborted round) and the next
+ * start replays the briefing. No host skip.
+ *
+ * Practice round (settings.warmupRound): round 1 of the first game gets 1.5×
+ * timers and its score breakdown is computed and shown, but the points are not
+ * added to scores and the round is not counted in award stats. It still counts
+ * toward roundsPerGame.
  */
 import {
   AWAY_GRACE_MS,
@@ -464,6 +476,7 @@ export class Game {
     if (patch.liarSeesTopic !== undefined) s.liarSeesTopic = bool(patch.liarSeesTopic, 'liarSeesTopic');
     if (patch.familyFriendly !== undefined) s.familyFriendly = bool(patch.familyFriendly, 'familyFriendly');
     if (patch.warmupRound !== undefined) s.warmupRound = bool(patch.warmupRound, 'warmupRound');
+    if (patch.briefing !== undefined) s.briefing = bool(patch.briefing, 'briefing');
     if (s.minPlayers > s.maxPlayers) s.minPlayers = s.maxPlayers;
     if (s.maxPlayers < this.players.length) throw new GameError('There are already more players than that');
 
@@ -509,13 +522,55 @@ export class Game {
     this.winners = undefined;
     this.awards = undefined;
     this.stats.clear();
+    if (this.settings.briefing && this.gamesStarted === 0) {
+      // first game in this room: group tutorial first (untimed, everyone confirms)
+      this.toLobby();
+      this.setPhase('briefing', null);
+      return;
+    }
+    this.beginGame(now);
+  }
+
+  /** deal round 1 of a new game (from lobby or briefing) */
+  private beginGame(now: number): void {
     this.gamesStarted++;
-    this.startRound(now);
+    try {
+      this.startRound(now);
+    } catch (e) {
+      this.gamesStarted--;
+      throw e;
+    }
+  }
+
+  /** briefing: "I get it". Idempotent; ignored outside the briefing. */
+  briefingReady(id: PlayerID, now: number): void {
+    const p = this.mustGet(id);
+    if (this.phase !== 'briefing') return;
+    p.ready = true;
+    this.checkAutoAdvance(now);
+  }
+
+  /** briefing → role-reveal once every non-offline player is ready; → lobby if too few remain */
+  private checkBriefing(now: number): void {
+    const present = this.players.filter((p) => p.presence !== 'offline');
+    if (present.length < Math.max(3, this.settings.minPlayers)) {
+      this.toasts.push('Not enough players — back to the lobby');
+      this.toLobby();
+      return;
+    }
+    if (!present.every((p) => p.ready)) return;
+    try {
+      this.beginGame(now);
+    } catch (e) {
+      this.toasts.push(e instanceof GameError ? e.message : 'Could not start the game');
+      this.toLobby();
+    }
   }
 
   /** true during the warm-up round: round 1 of the first game in this room */
   get warmup(): boolean {
-    return this.settings.warmupRound && this.gamesStarted === 1 && this.roundNumber === 1 && this.phase !== 'lobby';
+    // a one-round game never becomes all-practice (everyone would tie at 0)
+    return this.settings.warmupRound && this.settings.roundsPerGame > 1 && this.gamesStarted === 1 && this.roundNumber === 1 && this.phase !== 'lobby';
   }
 
   /** seconds → ms, stretched during the warm-up round */
@@ -673,6 +728,8 @@ export class Game {
   skipPhase(byId: PlayerID, now: number): void {
     this.requireHost(byId);
     switch (this.phase) {
+      case 'briefing':
+        return; // no host skip: nobody gets left behind
       case 'clues':
         this.enterDiscussion(now);
         break;
@@ -843,16 +900,20 @@ export class Game {
       lines[p.id] = mine;
       deltas[p.id] = mine.reduce((a, l) => a + l.points, 0);
     }
-    for (const [id, d] of Object.entries(deltas)) {
-      const p = this.get(id);
-      if (p) p.score += d;
+    // practice round: the breakdown is shown, but points and award stats don't count
+    const practice = this.warmup;
+    if (!practice) {
+      for (const [id, d] of Object.entries(deltas)) {
+        const p = this.get(id);
+        if (p) p.score += d;
+      }
     }
 
     // game stats for awards
     const received = new Map<PlayerID, number>();
     for (const t of firstVotes.values()) received.set(t, (received.get(t) ?? 0) + 1);
     for (const p of this.players) {
-      if (!p.inRound) continue;
+      if (practice || !p.inRound) continue;
       const st = this.statsFor(p.id);
       const isLiar = this.liarIds.includes(p.id);
       if (isLiar) {
@@ -935,6 +996,9 @@ export class Game {
     const active = this.players.filter((p) => p.inRound && p.connected);
     const here = active.filter((p) => p.presence === 'online');
     switch (this.phase) {
+      case 'briefing':
+        this.checkBriefing(now);
+        break;
       case 'role-reveal':
         if (here.length > 0 && here.every((p) => p.ready)) this.enterClues(now);
         break;
@@ -1019,7 +1083,8 @@ export class Game {
         clues: this.clues.map((c) => ({ ...c })),
         result: showResult ? this.result : null,
         runoff: this.phase === 'voting' && this.runoff ? [...this.runoff] : null,
-        warmup: this.warmup
+        warmup: this.warmup,
+        practice: this.warmup
       },
       packs,
       premium: this.premium

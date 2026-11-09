@@ -117,3 +117,9 @@
 }
 .scores__why { grid-column: 1 / -1; margin-top: -4px; }
 .scores__why:empty { display: none; }
+
+/* practice round: points shown, not counted */
+.scores__practice { margin: 0 0 8px; font-size: var(--fs-meta); line-height: 1.35; color: var(--text-dim); }
+.scores__practice-tag { display: inline-block; margin-right: 6px; padding: 1px 8px; background: var(--ink); color: var(--news); font-family: var(--font-type); font-size: var(--fs-meta); }
+[data-theme='midnight'] .scores__practice-tag, [data-theme='cozy'] .scores__practice-tag { background: var(--surface-3); color: var(--text); }
+.scores__delta.is-practice { background: none; outline: 2px dashed var(--ink); outline-offset: -2px; text-decoration: line-through; }

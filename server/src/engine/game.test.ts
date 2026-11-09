@@ -5,7 +5,7 @@ import { FIXTURE_PACKS, profile, seeded } from '../test/fixtures.js';
 
 const T0 = 1_000_000;
 
-function setup(n: number, settings: Partial<GameSettings> = {}, opts: { premium?: boolean; seed?: number; warmup?: boolean } = {}) {
+function setup(n: number, settings: Partial<GameSettings> = {}, opts: { premium?: boolean; seed?: number; warmup?: boolean; briefing?: boolean } = {}) {
   let i = 0;
   const g = new Game({
     code: 'ABCD',
@@ -13,8 +13,8 @@ function setup(n: number, settings: Partial<GameSettings> = {}, opts: { premium?
     rng: seeded(opts.seed ?? 7),
     idGen: () => `p${++i}`,
     premium: opts.premium,
-    // most tests check exact timers; the warm-up round has its own tests
-    settings: { warmupRound: !!opts.warmup }
+    // most tests check exact timers / start straight at role-reveal; warm-up and briefing have their own tests
+    settings: { warmupRound: !!opts.warmup, briefing: !!opts.briefing }
   });
   const ids: string[] = [];
   for (let k = 0; k < n; k++) ids.push(g.addPlayer(profile(`P${k}`), `tok${k}`, T0).id);
@@ -745,5 +745,198 @@ describe('codenames', () => {
     expect(g.get(ids[0])!.name).not.toBe('p0 2');
     g.updateProfile(ids[0], profile('P0'));
     expect(g.get(ids[0])!.name).toBe('P0'); // own name is not a clash
+  });
+});
+
+describe('briefing (group tutorial)', () => {
+  const brief = (n: number, settings: Partial<GameSettings> = {}) => setup(n, settings, { briefing: true });
+  const readyAll = (g: Game, ids: string[], now = T0) => ids.forEach((id) => g.briefingReady(id, now));
+
+  it('first game enters an untimed briefing with ready flags reset', () => {
+    const { g, ids, host } = brief(3);
+    g.get(ids[1])!.ready = true;
+    g.start(host, T0);
+    expect(g.phase).toBe('briefing');
+    expect(g.phaseEndsAt).toBeNull();
+    expect(g.nextWakeAt()).toBeNull();
+    expect(g.players.every((p) => !p.ready)).toBe(true);
+    expect(g.roundNumber).toBe(0);
+    const pub = g.publicState(T0);
+    expect(pub.round.phase).toBe('briefing');
+    expect(pub.round.topic).toBeNull();
+    for (const id of ids) expect(g.privateView(id)).toMatchObject({ role: null, secretWord: null, topic: null });
+  });
+
+  it('starts the round only once every player is ready (idempotent)', () => {
+    const { g, ids, host } = brief(3);
+    g.start(host, T0);
+    g.briefingReady(ids[0], T0);
+    g.briefingReady(ids[0], T0);
+    g.briefingReady(ids[1], T0);
+    expect(g.phase).toBe('briefing');
+    expect(g.get(ids[0])!.ready).toBe(true);
+    g.briefingReady(ids[2], T0 + 5);
+    expect(g.phase).toBe('role-reveal');
+    expect(g.roundNumber).toBe(1);
+    expect(g.phaseEndsAt).toBe(T0 + 5 + ROLE_REVEAL_MS);
+    expect(g.players.every((p) => !p.ready && p.inRound)).toBe(true);
+    g.briefingReady(ids[0], T0); // ignored outside the briefing
+    expect(g.get(ids[0])!.ready).toBe(false);
+  });
+
+  it('second game / restart and briefing:false skip it', () => {
+    const { g, host } = brief(3, { roundsPerGame: 1 });
+    g.start(host, T0);
+    readyAll(g, g.players.map((p) => p.id));
+    expect(g.phase).toBe('role-reveal');
+    for (const p of g.players) g.ready(p.id, T0);
+    g.skipPhase(host, T0);
+    g.skipPhase(host, T0);
+    g.skipPhase(host, T0);
+    if (g.phase === 'liar-guess') g.skipPhase(host, T0);
+    g.nextRound(host, T0);
+    expect(g.phase).toBe('game-over');
+    g.restart(host);
+    g.start(host, T0);
+    expect(g.phase).toBe('role-reveal');
+
+    const off = setup(3); // briefing: false
+    off.g.start(off.host, T0);
+    expect(off.g.phase).toBe('role-reveal');
+  });
+
+  it('accepts briefing in settings (boolean, lobby only)', () => {
+    const { g, host } = setup(3);
+    g.updateSettings(host, { briefing: true });
+    expect(g.settings.briefing).toBe(true);
+    expect(() => g.updateSettings(host, { briefing: 'yes' as unknown as boolean })).toThrow(/briefing/);
+    g.start(host, T0);
+    expect(() => g.updateSettings(host, { briefing: false })).toThrow(/lobby/);
+  });
+
+  it('an away player blocks until they confirm; an offline player does not', () => {
+    const { g, ids, host } = brief(4);
+    g.start(host, T0);
+    g.setVisible(ids[3], false, T0); // texting someone
+    expect(g.get(ids[3])!.presence).toBe('away');
+    readyAll(g, ids.slice(0, 3));
+    expect(g.phase).toBe('briefing');
+    g.setVisible(ids[3], true, T0);
+    g.briefingReady(ids[3], T0);
+    expect(g.phase).toBe('role-reveal');
+
+    const b = brief(4);
+    b.g.goOffline(b.ids[3], T0);
+    b.g.start(b.host, T0);
+    readyAll(b.g, b.ids.slice(0, 3));
+    expect(b.g.phase).toBe('role-reveal');
+    expect(b.g.get(b.ids[3])!.inRound).toBe(false);
+  });
+
+  it('an away player expiring to offline unblocks the room', () => {
+    const { g, ids, host } = brief(4);
+    g.start(host, T0);
+    g.setSocket(ids[3], false, T0);
+    readyAll(g, ids.slice(0, 3));
+    expect(g.phase).toBe('briefing');
+    expect(g.nextWakeAt()).toBe(T0 + AWAY_GRACE_MS);
+    g.tick(T0 + AWAY_GRACE_MS);
+    expect(g.phase).toBe('role-reveal');
+  });
+
+  it('a player leaving or being kicked unblocks the room', () => {
+    const { g, ids, host } = brief(5);
+    g.start(host, T0);
+    readyAll(g, ids.slice(0, 3));
+    g.removePlayer(ids[3], T0);
+    expect(g.phase).toBe('briefing');
+    g.kick(host, ids[4], T0);
+    expect(g.phase).toBe('role-reveal');
+  });
+
+  it('returns to the lobby when fewer than minPlayers remain; next start replays it', () => {
+    const { g, ids, host } = brief(3);
+    g.start(host, T0);
+    g.briefingReady(ids[0], T0);
+    g.removePlayer(ids[2], T0);
+    expect(g.phase).toBe('lobby');
+    expect(g.drainToasts()).toContain('Not enough players — back to the lobby');
+    expect(g.players.every((p) => !p.ready)).toBe(true);
+    g.addPlayer(profile('Z'), 'tz', T0);
+    g.start(host, T0);
+    expect(g.phase).toBe('briefing');
+  });
+
+  it('a player who joins during the briefing must confirm too', () => {
+    const { g, ids, host } = brief(3);
+    g.start(host, T0);
+    readyAll(g, ids.slice(0, 2));
+    const late = g.addPlayer(profile('Late'), 'tlate', T0);
+    expect(late.ready).toBe(false);
+    g.briefingReady(ids[2], T0);
+    expect(g.phase).toBe('briefing');
+    g.briefingReady(late.id, T0);
+    expect(g.phase).toBe('role-reveal');
+    expect(g.get(late.id)!.inRound).toBe(true);
+  });
+
+  it('phase:skip is ignored during the briefing', () => {
+    const { g, host } = brief(3);
+    g.start(host, T0);
+    expect(() => g.skipPhase(host, T0)).not.toThrow();
+    expect(g.phase).toBe('briefing');
+  });
+
+  it('warm-up still applies to round 1 after the briefing', () => {
+    const { g, ids, host } = setup(3, {}, { briefing: true, warmup: true });
+    g.start(host, T0);
+    expect(g.publicState(T0).round.warmup).toBe(false);
+    readyAll(g, ids);
+    expect(g.publicState(T0).round).toMatchObject({ warmup: true, practice: true });
+  });
+});
+
+describe('practice round', () => {
+  /** finish a round where every agent catches the spy and the spy guesses wrong */
+  function catchSpy(g: Game, host: string) {
+    for (const p of g.players) g.ready(p.id, T0);
+    g.skipPhase(host, T0);
+    g.skipPhase(host, T0);
+    const L = liar(g);
+    for (const p of g.players) g.castVote(p.id, p.id === L ? truthers(g)[0] : L, T0);
+    if (g.phase === 'liar-guess') g.submitGuess(L, g.topic!.words.find((w) => w !== g.secretWord)!, T0);
+    expect(g.phase).toBe('results');
+  }
+
+  it('shows the breakdown but keeps scores at 0; later rounds count; awards ignore it', () => {
+    const { g, host } = setup(4, { roundsPerGame: 2 }, { warmup: true });
+    g.start(host, T0);
+    catchSpy(g, host);
+    const r1 = g.publicState(T0).round;
+    expect(r1).toMatchObject({ practice: true, warmup: true, number: 1 });
+    const agent = truthers(g)[0];
+    expect(r1.result!.scoreDeltas[agent]).toBe(SCORE['agent-spotted-spy'] + SCORE['agent-team-win']);
+    expect(r1.result!.scoreBreakdown![agent].map((l) => l.rule)).toEqual(['agent-spotted-spy', 'agent-team-win']);
+    expect(g.players.every((p) => p.score === 0)).toBe(true);
+
+    g.nextRound(host, T0);
+    expect(g.publicState(T0).round.practice).toBe(false);
+    catchSpy(g, host);
+    const agent2 = truthers(g)[0];
+    expect(g.get(agent2)!.score).toBe(SCORE['agent-spotted-spy'] + SCORE['agent-team-win']);
+    expect(g.get(liar(g))!.score).toBe(0);
+
+    g.nextRound(host, T0); // practice round counts toward roundsPerGame
+    expect(g.phase).toBe('game-over');
+    const eye = g.publicState(T0).awards!.find((a) => a.id === 'sharpest-eye')!;
+    expect(eye.value).toBe(1); // only round 2 counted
+  });
+
+  it('no practice round when warmupRound is off', () => {
+    const { g, host } = setup(4);
+    g.start(host, T0);
+    catchSpy(g, host);
+    expect(g.publicState(T0).round.practice).toBe(false);
+    expect(g.get(truthers(g)[0])!.score).toBe(SCORE['agent-spotted-spy'] + SCORE['agent-team-win']);
   });
 });

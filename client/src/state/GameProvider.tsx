@@ -60,6 +60,8 @@ export interface GameStore {
     kick: (id: PlayerID) => void;
     start: () => void;
     ready: () => void;
+    /** briefing tutorial: "I'm ready" (sets your Player.ready; the game starts once everyone is) */
+    briefingReady: () => void;
     submitClue: (text: string) => void;
     clueDone: () => void;
     skip: () => void;
@@ -332,6 +334,7 @@ export function GameProvider({ transport, children }: { transport: Transport; ch
           if (!res.ok) toast(res.error, 'error');
         }),
       ready: () => t.emit('role:ready'),
+      briefingReady: () => t.emit('briefing:ready'),
       submitClue: (text) => t.emit('clue:submit', text),
       clueDone: () => t.emit('clue:done'),
       skip: () => t.emit('phase:skip'),

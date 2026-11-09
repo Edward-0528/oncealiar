@@ -47,6 +47,26 @@ export function Redacted({ text = 'XXXXXXXX', label = 'Redacted', className = ''
   );
 }
 
+/** Inked thumbprint on the closed role file (RoleReveal + the briefing demo). */
+export function Fingerprint({ size = 74 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 64 64" width={size} height={size} aria-hidden="true" className="rcard__print">
+      {[6, 11, 16, 21, 26].map((r, i) => (
+        <path
+          key={r}
+          d={`M${32 - r} ${38 + i} a${r} ${r + 4} 0 0 1 ${r * 2} 0`}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.6"
+          strokeLinecap="round"
+          strokeDasharray={i % 2 ? '10 4' : '18 5'}
+        />
+      ))}
+      <path d="M32 40 v14 M24 44 q0 10 4 14 M40 44 q0 10 -4 14" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 /* ---------------- Reactions as rubber stamps ---------------- */
 
 /** Contract reaction ids (emoji) → stamp label. Unknown ids fall back to the emoji itself. */

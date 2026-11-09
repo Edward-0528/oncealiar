@@ -12,6 +12,8 @@ import { sfx } from '../lib/sound';
 import { CoachTip } from '../components/coach/CoachTip';
 import { Masthead } from '../components/Paper';
 import { staggerDelay } from '../lib/motion';
+import { BRIEFING_SECONDS } from '../components/demo/GameDemo';
+import { hasRoomPlayed } from '../lib/roomHistory';
 import './Lobby.css';
 
 export function Lobby() {
@@ -174,6 +176,7 @@ export function Lobby() {
             >
               {need > 0 ? `Need ${need} more suspect${need > 1 ? 's' : ''}` : `Start game · ${players.length} players`}
             </button>
+            {need === 0 && s.briefing && !hasRoomPlayed(game.code) && <p className="center lobby__tutorial">Starts with a {BRIEFING_SECONDS}-second tutorial</p>}
             <p className="center lobby__hint">
               {need > 0 ? 'Share the code. Everyone joins on their own phone.' : players.length < 5 ? 'Tip: 5–8 players is the sweet spot.' : 'Looking good. Phones out, poker faces on.'}
             </p>

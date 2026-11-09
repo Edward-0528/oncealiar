@@ -9,12 +9,16 @@
 
 export type PlayerID = string;
 
-/** Round flow. `lobby` → `role-reveal` → `clues` → `discussion` → `voting`
+/** Round flow. `lobby` → (`briefing`, first game only) → `role-reveal` → `clues` → `discussion` → `voting`
  *  (→ a 10s sudden-death re-vote inside `voting` when tied, see PublicRound.runoff)
  *  → (`liar-guess` if the liar was caught and hasn't locked a guess) → `results`
  *  → next round or `game-over`. Rules live in shared/src/rules.ts. */
 export type Phase =
   | 'lobby'
+  /** first game in a room only (settings.briefing): animated tutorial on every phone;
+   *  advances to role-reveal once every non-offline player has sent `briefing:ready`.
+   *  No timer and no host skip, so nobody gets left behind. */
+  | 'briefing'
   | 'role-reveal'
   | 'clues'
   | 'discussion'
@@ -67,8 +71,11 @@ export interface GameSettings {
   /** the liar sees the category/topic name (classic) */
   liarSeesTopic: boolean;
   familyFriendly: boolean; // filters packs flagged `mature`
-  /** the very first round played in a room gets 1.5× timers (WARMUP_FACTOR) */
+  /** the very first round played in a room is a practice round: 1.5× timers
+   *  (WARMUP_FACTOR) and its points don't count (shown, then discarded) */
   warmupRound: boolean;
+  /** play the animated group tutorial before the first game in a room */
+  briefing: boolean;
 }
 
 export const DEFAULT_SETTINGS: GameSettings = {
@@ -84,7 +91,8 @@ export const DEFAULT_SETTINGS: GameSettings = {
   packIds: ['starter'],
   liarSeesTopic: true,
   familyFriendly: true,
-  warmupRound: true
+  warmupRound: true,
+  briefing: true
 };
 
 /** A topic card: 16 related words. Everyone sees the grid; truth-tellers also
@@ -185,6 +193,8 @@ export interface PublicRound {
   result: RoundResult | null; // only during results / game-over
   /** during `voting`: non-null while the 10s sudden-death re-vote between these tied players runs */
   runoff?: PlayerID[] | null;
+  /** true during the practice round (warm-up): points are shown but not added to scores */
+  practice?: boolean;
   /** true during the room's warm-up round (longer timers; show coach tips) */
   warmup?: boolean;
 }
@@ -263,6 +273,7 @@ export interface ClientToServerEvents {
   'player:kick': (playerId: PlayerID) => void; // host only
   'game:start': (ack?: Ack) => void; // host only
   'role:ready': () => void; // during role-reveal
+  'briefing:ready': () => void; // during briefing: "I get it" (uses Player.ready)
   'clue:submit': (text: string) => void; // typed mode, current turn only
   'clue:done': () => void; // spoken mode: current player (or host) ends their turn
   'phase:skip': () => void; // host only: end the current timed phase now

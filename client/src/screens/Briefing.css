@@ -1,0 +1,62 @@
+/* Briefing: the group tutorial before the first game. One screen, no page scroll on a
+   6.3" phone: caption up top, the demo phone fills the middle, the ready button sits
+   in the thumb zone (sticky, so it stays reachable on short screens). */
+.brief { gap: 10px; padding-top: 4px; padding-bottom: 0; min-height: 0; }
+
+.brief__head { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
+.brief__eyebrow {
+  padding: 2px 10px;
+  background: var(--ink);
+  color: var(--news);
+  font-size: var(--fs-meta);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1.5;
+}
+[data-theme='midnight'] .brief__eyebrow, [data-theme='cozy'] .brief__eyebrow { background: var(--surface-3); color: var(--text); }
+.brief__caption {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 2px 0 0;
+  font-size: 22px;
+  line-height: 1.05;
+  animation: enter var(--dur-base) var(--ease-out) both;
+}
+.brief__num {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--siren);
+  color: #fff;
+  border: 2px solid var(--ink);
+  font-size: var(--fs-meta);
+  line-height: 1;
+}
+.brief__sub { margin: 0; max-width: 360px; min-height: 2.7em; font-size: var(--fs-meta); line-height: 1.35; color: var(--text-dim); }
+
+.brief__stage { flex: 1 1 0; min-height: 360px; display: flex; justify-content: center; }
+.brief__phone.demo-phone { height: 100%; max-height: 560px; }
+.brief .demo-dots { margin: -6px 0 -8px; }
+
+.brief__foot {
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+  padding: 12px 0 calc(14px + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, transparent, var(--bg) 14px);
+}
+.brief__ready { gap: 8px 10px; }
+.brief__count { font-size: var(--fs-meta); }
+.brief__rule { margin: 0; text-align: center; font-size: var(--fs-meta); font-weight: 600; color: var(--text-dim); }

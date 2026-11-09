@@ -39,6 +39,9 @@ export function deriveDockStatus(game: PublicGameState | null | undefined, you: 
   };
 
   switch (r.phase) {
+    case 'briefing':
+      if (!me.ready) return { kind: 'you', text: 'Watch the demo, then tap I’m ready', time: null };
+      return waitingOn(game.players.filter((p) => !p.ready && p.id !== me.id).map((p) => p.id));
     case 'role-reveal':
       if (!me.ready) return { kind: 'you', text: 'Read your card, then tap Got it', time };
       return waitingOn(game.players.filter((p) => !p.ready && p.id !== me.id).map((p) => p.id));

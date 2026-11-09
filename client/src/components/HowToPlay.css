@@ -98,3 +98,8 @@
 }
 .htp-role--spy { background: var(--accent-soft); color: var(--accent); }
 .htp-role--agent { background: var(--highlight-soft); color: var(--highlight); }
+
+/* "Watch the demo": the animated briefing demo inside the sheet */
+.htp-watch { margin-bottom: 12px; }
+.htp-demo { --demo-h: min(468px, 58dvh); padding-bottom: 4px; }
+.htp-demo .demo__cap { min-height: 96px; }

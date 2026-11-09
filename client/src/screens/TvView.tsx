@@ -11,6 +11,7 @@ const POLL_MS = 2000;
 
 const PHASE_LABEL: Record<RoomPeek['phase'], string> = {
   lobby: 'Waiting for players',
+  briefing: 'Learning the ropes…',
   'role-reveal': 'Checking secret roles…',
   clues: 'Clue time',
   discussion: 'Interrogation in progress',
@@ -73,7 +74,7 @@ export function TvView({ code, transport }: { code: string; transport: Transport
       <section className="tv__players">
         <h2 className="tv__status display">
           {room === undefined ? 'Connecting…' : room === null ? 'Room not found' : PHASE_LABEL[room.phase]}
-          {room && room.phase !== 'lobby' && room.phase !== 'game-over' && room.settings && (
+          {room && room.phase !== 'lobby' && room.phase !== 'briefing' && room.phase !== 'game-over' && room.settings && (
             <span className="tv__round"> · Round {room.round} of {room.settings.roundsPerGame}</span>
           )}
         </h2>
@@ -86,7 +87,7 @@ export function TvView({ code, transport }: { code: string; transport: Transport
                   <Avatar avatar={p.avatar} color={p.color} size={84} label="" />
                 </span>
                 <span className="tv__name">{p.name}</span>
-                {room.phase !== 'lobby' && <span className="tv__score">{p.score} pts</span>}
+                {room.phase !== 'lobby' && room.phase !== 'briefing' && <span className="tv__score">{p.score} pts</span>}
                 {p.isHost && <span className="tv__host">Host</span>}
                 <PresenceBadge player={p} className="tv__presence" />
               </li>
