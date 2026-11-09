@@ -61,7 +61,7 @@ function SignIn() {
       </label>
       {sent && (
         <>
-          <p className="account__hint">We emailed a sign-in link and a code to {email.trim()}. Tap the link, or type the code here.</p>
+          <p className="account__hint">We emailed {email.trim()}. Tap the sign-in link in that email, or type the code here if it includes one.</p>
           <label className="field">
             <span className="field__label">Code</span>
             <input
