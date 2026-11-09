@@ -20,6 +20,8 @@ import { Voting } from '../screens/Voting';
 import { LiarGuess } from '../screens/LiarGuess';
 import { Results } from '../screens/Results';
 import { GameOver } from '../screens/GameOver';
+import { WakeGate } from '../components/WakeUp';
+import type { WakeMonitor } from '../lib/wake';
 
 let bootCounted = false;
 
@@ -64,7 +66,11 @@ function Tv({ code, transport }: { code: string; transport: Transport }) {
   return <TvView code={code} transport={transport} />;
 }
 
-export function App({ transport }: { transport: Transport }) {
+/**
+ * `wake`: the boot-time server probe (lib/bootWake). While a sleeping free-tier server boots,
+ * the WakeGate shows the "STOP THE PRESSES!" screen instead of the app. Omitted in tests/mock.
+ */
+export function App({ transport, wake = null }: { transport: Transport; wake?: WakeMonitor | null }) {
   useEffect(() => {
     if (transport.kind !== 'live' || bootCounted) return;
     bootCounted = true;
@@ -76,8 +82,10 @@ export function App({ transport }: { transport: Transport }) {
   if (tv) {
     return (
       <GameProvider transport={transport}>
-        <ReconnectBanner />
-        <Tv code={tv} transport={transport} />
+        <WakeGate monitor={wake}>
+          <ReconnectBanner />
+          <Tv code={tv} transport={transport} />
+        </WakeGate>
       </GameProvider>
     );
   }
@@ -85,11 +93,13 @@ export function App({ transport }: { transport: Transport }) {
   return (
     <GameProvider transport={transport}>
       <div className="app">
-        <ReconnectBanner />
-        <TopBar />
-        <LookHint />
-        <NotifyPrompt />
-        <Router />
+        <WakeGate monitor={wake}>
+          <ReconnectBanner />
+          <TopBar />
+          <LookHint />
+          <NotifyPrompt />
+          <Router />
+        </WakeGate>
       </div>
       <Toasts />
       {transport.kind === 'mock' && <MockBar />}

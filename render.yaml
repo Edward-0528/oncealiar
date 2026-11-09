@@ -1,0 +1,77 @@
+# Render Blueprint — Once a Liar on the FREE plan.
+#   Dashboard → New → Blueprint → pick this repo → Apply.   (full guide: docs/deploy-render.md)
+#
+# Two services:
+#   oncealiar         static site  — the React client from client/dist on Render's CDN. Free, never sleeps.
+#   oncealiar-server  web service  — the Socket.IO game server. Free: sleeps after ~15 min idle,
+#                                    ~30–60 s cold start (the client shows a "waking up" screen meanwhile).
+services:
+  # ───────────────────────── game server ─────────────────────────
+  - type: web
+    name: oncealiar-server
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm ci && npm run build:server
+    startCommand: npm start
+    healthCheckPath: /healthz
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Origins allowed to talk to the server (CORS for /healthz + Socket.IO). Comma-separated, `*` wildcards ok.
+      # Covers the default static-site URL and the suffixed one Render assigns if "oncealiar" is taken
+      # (and PR previews). Add your custom domain here later, e.g. ",https://play.example.com".
+      - key: CLIENT_ORIGIN
+        value: https://oncealiar.onrender.com,https://oncealiar-*.onrender.com
+      # Optional paid feature codes (comma-separated); set in the dashboard, never committed.
+      - key: PREMIUM_CODES
+        sync: false
+
+  # ───────────────────────── client (static) ─────────────────────────
+  - type: web
+    name: oncealiar
+    runtime: static
+    buildCommand: npm ci && npm run build:client
+    staticPublishPath: ./client/dist
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Build-time: where the client's socket + /healthz probe go. Render hands over the server's
+      # internal hostname (e.g. "oncealiar-server" or "oncealiar-server-x1y2"); the client turns a
+      # dot-less host into https://<host>.onrender.com. Set VITE_SERVER_URL to override (custom domain).
+      - key: VITE_SERVER_HOST
+        fromService:
+          type: web
+          name: oncealiar-server
+          property: host
+    # SPA: /ABCD invite links, ?room= and ?tv= all load index.html (real files are served first).
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      # content-hashed build output: cache forever
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      # app shell, service worker and manifest: always revalidate so a deploy shows up on the next load
+      - path: /
+        name: Cache-Control
+        value: no-cache
+      - path: /index.html
+        name: Cache-Control
+        value: no-cache
+      - path: /sw.js
+        name: Cache-Control
+        value: no-cache
+      - path: /manifest.webmanifest
+        name: Cache-Control
+        value: no-cache
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin

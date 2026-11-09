@@ -2,9 +2,11 @@
  * - Navigations (index.html, /ABCD deep links): network-first, cached shell as offline fallback,
  *   so a deploy is picked up immediately but a flaky reload is still instant.
  * - Hashed build assets (/assets/*), icons, fonts: cache-first (immutable).
- * - Never touches Socket.IO traffic or anything cross-origin except Google Fonts.
+ * - Never touches Socket.IO traffic, the /healthz wake-up probe, or anything cross-origin
+ *   except Google Fonts — in a split deploy the game server is cross-origin and must always
+ *   hit the network (a cached "healthy" answer would hide a sleeping server).
  */
-const VERSION = 'oal-v1';
+const VERSION = 'oal-v2';
 const SHELL = 'oal-shell-' + VERSION;
 const ASSETS = 'oal-assets-' + VERSION;
 const PRECACHE = ['/', '/manifest.webmanifest', '/icon.svg', '/icon-192.png'];
@@ -26,6 +28,9 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
+  const sameOrigin = url.origin === self.location.origin;
+  const isFont = url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
+  if (!sameOrigin && !isFont) return; // game server (split deploy), analytics, anything else: network only
   if (url.pathname.startsWith('/socket.io') || url.pathname === '/healthz') return;
 
   if (req.mode === 'navigate') {
@@ -43,8 +48,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  const sameOrigin = url.origin === self.location.origin;
-  const isFont = url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
   const cacheable = (sameOrigin && (url.pathname.startsWith('/assets/') || /\.(png|svg|webmanifest|woff2?)$/.test(url.pathname))) || isFont;
   if (!cacheable) return;
 

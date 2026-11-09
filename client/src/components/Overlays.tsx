@@ -10,6 +10,7 @@ import { dedupeName } from '../lib/profile';
 import { getFlag, loadStats, setFlag } from '../lib/storage';
 import { notificationPermission, requestNotifications } from '../lib/attention';
 import { canPromptInstall, isIOS, isStandalone, onInstallAvailability, promptInstall } from '../lib/pwa';
+import { useWakeBannerShown } from './WakeUp';
 import './Overlays.css';
 
 export function Toasts() {
@@ -38,6 +39,7 @@ export const RECONNECT_PILL_DELAY_MS = 2000;
 export function ReconnectBanner() {
   const { conn, game, toast, transport } = useGame();
   const visible = usePageVisible();
+  const wakeBanner = useWakeBannerShown();
   const [show, setShow] = useState(false);
   const wasShown = useRef(false);
   const inGame = useRef(false);
@@ -58,7 +60,7 @@ export function ReconnectBanner() {
     return () => clearTimeout(t);
   }, [conn, visible, toast, transport.kind]);
 
-  if (!show || conn === 'connected') return null;
+  if (!show || conn === 'connected' || wakeBanner) return null;
   return (
     <div className="reconnect" role="status" aria-live="polite">
       <span className="reconnect__pill">
