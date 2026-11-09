@@ -4,7 +4,6 @@ import { useGame, usePlayers } from '../state/GameProvider';
 import { useReducedMotion } from '../state/hooks';
 import { Avatar } from '../components/Avatar';
 import { useBeatCues, type BeatCue } from '../components/avatars/beats';
-import { Confetti } from '../components/Confetti';
 import { AnimatedNumber } from '../components/AnimatedNumber';
 import { Icon } from '../components/Icon';
 import { ReactionBar } from '../components/Dock';
@@ -209,7 +208,6 @@ export function Results() {
 
       {showSummary && (
         <>
-          {iWon && <Confetti />}
           <header className="masthead">
             <div className="masthead__meta">
               <span>The Daily Fib · Extra!</span>

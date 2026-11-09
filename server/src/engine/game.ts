@@ -46,7 +46,8 @@ import {
 
 export class GameError extends Error {}
 
-export const ROLE_REVEAL_MS = 15_000;
+/** safety net only: the phase ends as soon as everyone has read their file */
+export const ROLE_REVEAL_MS = 30_000;
 export const FREE_MAX_PLAYERS = 12;
 export const PREMIUM_MAX_PLAYERS = 20;
 export const MAX_CLUE_LENGTH = 24;

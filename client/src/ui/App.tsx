@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
 import type { Transport } from '../lib/transport';
 import { GameProvider, useGame } from '../state/GameProvider';
 import { useGameFx } from '../state/useGameFx';
@@ -32,6 +32,12 @@ function Router() {
   // keep phones awake for the whole game (lobby → results); browsers drop the lock when hidden, we re-take it
   useWakeLock(!!game && game.round.phase !== 'game-over');
   const roomParam = typeof window !== 'undefined' ? roomFromLocation().code ?? '' : '';
+  // every phase starts at the top: without this a phone keeps the lobby's scroll offset
+  // (the Start button lives at the bottom) and lands mid-way down the next screen
+  const phaseKey = game ? `${game.round.phase}-${game.round.number}` : 'home';
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0);
+  }, [phaseKey]);
 
   if (!game || !you) {
     if (restoring) return <Splash label="Getting you back in…" />;
