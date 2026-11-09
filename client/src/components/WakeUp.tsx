@@ -207,10 +207,8 @@ export function WakeUpScreen({
       ? 'Still waking… this is taking longer than usual.'
       : 'Waking up the game server. This usually takes under a minute.';
 
-  const save = () => {
-    const name = draft.name.trim();
-    if (!name) return;
-    setProfile({ ...draft, name });
+  const save = (p: PlayerProfile) => {
+    setProfile(p);
     setEditing(false);
   };
 
@@ -287,17 +285,8 @@ export function WakeUpScreen({
       </div>
 
       <HowToPlay open={help} onClose={() => setHelp(false)} />
-      <Sheet
-        open={editing}
-        onClose={() => setEditing(false)}
-        title="Your disguise"
-        footer={
-          <button className="btn btn--primary btn--block" onClick={save} disabled={!draft.name.trim()}>
-            Looks good
-          </button>
-        }
-      >
-        <ProfileEditor value={draft} onChange={setDraft} premium={false} />
+      <Sheet open={editing} onClose={() => setEditing(false)} title="Your disguise">
+        <ProfileEditor value={draft} onChange={setDraft} premium={false} ctaLabel="Looks good" onSubmit={save} />
       </Sheet>
     </main>
   );

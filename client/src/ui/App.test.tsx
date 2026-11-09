@@ -27,6 +27,18 @@ describe('App (mock mode)', () => {
     expect(screen.getAllByLabelText(/room code character/i)).toHaveLength(4);
   });
 
+  it('?mock=profile shows the Backstage picker (premium=1 unlocks the packs)', () => {
+    const { unmount } = renderMock('profile');
+    expect(screen.getByRole('tablist', { name: /case files/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('tab', { name: /disguise/i }));
+    expect(screen.getByRole('button', { name: /try on le waiter/i })).toBeInTheDocument();
+    unmount();
+    renderMock('profile', { premium: '1' });
+    fireEvent.click(screen.getByRole('tab', { name: /disguise/i }));
+    expect(screen.getByRole('button', { name: 'Wear Le Waiter' })).toBeInTheDocument();
+  });
+
   it('auto-uppercases and advances the code boxes', () => {
     renderMock('home');
     const boxes = screen.getAllByLabelText(/room code character/i) as HTMLInputElement[];
