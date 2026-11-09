@@ -1,42 +1,113 @@
-/* Idle motion for the Tabloid Spy cast. Only runs on <Avatar animated />. */
+/*
+ * Tabloid Spy cast — motion ("Ink & Impact").
+ * Characters are STILL by default. No idle loops. They react to game events with
+ * a one-shot BEAT (see beats.ts): the beat layer <g class="av-beat-layer"> is
+ * re-keyed by React to restart the animation, then it settles at rest.
+ */
 .av [class*='av-anim'],
-.av [class*='av-part'] {
+.av [class*='av-part'],
+.av .av-beat-layer {
   transform-box: fill-box;
   transform-origin: 50% 50%;
 }
+.av .av-beat-layer { transform-origin: 50% 100%; }
+.av { transition: filter var(--dur-slow) var(--ease-out); }
 
-.av--animated .av-anim--swing .av-part-sole { transform-origin: 30% 90%; animation: av-swing 1.6s cubic-bezier(0.5, 0, 0.3, 1.4) infinite; }
-.av--animated .av-anim--swing .av-part-burst { animation: av-pop 1.6s ease-out infinite; }
-.av--animated .av-anim--swing .av-part-whoosh { animation: av-blink 1.6s steps(2) infinite; }
-.av--animated .av-anim--float { animation: av-float 3s ease-in-out infinite; }
-.av--animated .av-anim--float .av-part-shadow { animation: av-shadow 3s ease-in-out infinite; }
-.av--animated .av-anim--peck .av-part-head { animation: av-peck 1.1s steps(1, end) infinite; }
-.av--animated .av-anim--bob { animation: av-bob 1.8s ease-in-out infinite; }
-.av--animated .av-anim--bounce { transform-origin: 50% 100%; animation: av-bounce 1.4s ease-in-out infinite; }
-.av--animated .av-anim--wiggle { transform-origin: 50% 100%; animation: av-wiggle 2.4s ease-in-out infinite; }
-.av--animated .av-anim--sway { transform-origin: 50% 100%; animation: av-sway 3.2s ease-in-out infinite; }
-.av--animated .av-anim--sneak { animation: av-sneak 3.6s ease-in-out infinite; }
-.av--animated .av-anim--flash .av-part-flash { animation: av-pop 2s ease-out infinite; }
-.av--animated .av-anim--fizz .av-part-spark { animation: av-fizz 0.5s steps(2) infinite; }
-.av--animated .av-part-chancla { transform-origin: 20% 100%; animation: av-wiggle 1.2s ease-in-out infinite; }
-.av--animated .av-part-bubble { animation: av-pop 2.4s ease-out infinite; }
-.av--animated .av-part-smoke { animation: av-blink 1.4s steps(2) infinite; }
-.av--animated .av-part-signal { animation: av-blink 0.8s steps(2) infinite; }
+/* ---------- Whole-body beats (on the beat layer) ---------- */
+.av-beat { animation-delay: calc(var(--beat-delay, 0ms) * var(--delay-scale, 1)); animation-fill-mode: both; }
+.av-beat--drop { animation-name: av-drop; animation-duration: 520ms; animation-timing-function: linear; }
+.av-beat--nudge { animation-name: av-nudge; animation-duration: 380ms; animation-timing-function: var(--ease-out); }
+.av-beat--flinch { animation-name: av-flinch; animation-duration: 260ms; animation-timing-function: var(--ease-out); }
+.av-beat--accused { animation-name: av-accused; animation-duration: 600ms; animation-timing-function: var(--ease-out); }
+.av-beat--unmask { animation-name: av-unmask; animation-duration: 700ms; animation-timing-function: var(--ease-inout); }
+.av-beat--gloat { animation-name: av-gloat; animation-duration: 600ms; animation-timing-function: var(--ease-out); }
+/* slump holds its end pose (and the root desaturates) until the beat changes */
+.av-beat--slump { animation-name: av-slump; animation-duration: 520ms; animation-timing-function: var(--ease-out); animation-fill-mode: both; }
+.av--beat-slump { filter: saturate(0.35); }
 
-@keyframes av-swing { 0%, 100% { transform: rotate(-9deg); } 45% { transform: rotate(10deg); } 55% { transform: rotate(7deg); } }
-@keyframes av-pop { 0%, 45%, 100% { transform: scale(1); } 55% { transform: scale(1.18) rotate(6deg); } 70% { transform: scale(0.96); } }
-@keyframes av-blink { 0% { opacity: 1; } 50% { opacity: 0.45; } }
-@keyframes av-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6%); } }
-@keyframes av-shadow { 0%, 100% { transform: scaleX(1); opacity: 1; } 50% { transform: scaleX(0.7); opacity: 0.5; } }
-@keyframes av-peck { 0% { transform: translate(0, 0); } 50% { transform: translate(7%, 3%); } }
-@keyframes av-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3%); } }
-@keyframes av-bounce { 0%, 100% { transform: translateY(0) scale(1, 1); } 40% { transform: translateY(-5%) scale(0.97, 1.03); } 60% { transform: translateY(0) scale(1.04, 0.96); } }
-@keyframes av-wiggle { 0%, 80%, 100% { transform: rotate(0); } 20% { transform: rotate(-5deg); } 40% { transform: rotate(4deg); } 60% { transform: rotate(-2deg); } }
-@keyframes av-sway { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
-@keyframes av-sneak { 0%, 100% { transform: translateX(0); } 30% { transform: translateX(-3%); } 60% { transform: translateX(3%); } }
-@keyframes av-fizz { 0% { transform: scale(1) rotate(0); } 50% { transform: scale(1.25) rotate(20deg); } }
-
-@media (prefers-reduced-motion: reduce) {
-  .av--animated,
-  .av--animated * { animation: none !important; }
+@keyframes av-drop {
+  0% { transform: translateY(calc(-1 * var(--dist-3, 32px))); opacity: 0; animation-timing-function: var(--ease-in, ease-in); }
+  15% { opacity: 1; }
+  55% { transform: translateY(0) scale(1, 1); animation-timing-function: var(--ease-out, ease-out); }
+  70% { transform: scale(1.1, 0.88); }
+  86% { transform: scale(0.97, 1.03); }
+  100% { transform: none; opacity: 1; }
 }
+@keyframes av-nudge {
+  0% { transform: none; }
+  20% { transform: scale(1.08, 0.92); }
+  55% { transform: translateY(-10%) scale(0.96, 1.04); }
+  82% { transform: scale(1.04, 0.96); }
+  100% { transform: none; }
+}
+@keyframes av-flinch {
+  0% { transform: none; }
+  30% { transform: translate(-2px, 1px); }
+  60% { transform: translate(2px, -1px); }
+  100% { transform: none; }
+}
+@keyframes av-accused {
+  0% { transform: none; }
+  15% { transform: translateX(-6%) rotate(-6deg) scale(0.95); }
+  35% { transform: translateX(4%) rotate(3deg); }
+  50% { transform: translateX(-3%) rotate(-2deg); }
+  65% { transform: translateX(2%); }
+  82% { transform: translateX(-1%); }
+  100% { transform: none; }
+}
+@keyframes av-unmask {
+  0% { transform: none; }
+  50% { transform: rotate(200deg) scale(1.15); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+@keyframes av-gloat {
+  0% { transform: none; }
+  15% { transform: scale(1.06, 0.92); }
+  45% { transform: translateY(-18%) scale(0.95, 1.06); }
+  75% { transform: translateY(0) scale(1.06, 0.94); }
+  100% { transform: none; }
+}
+@keyframes av-slump {
+  from { transform: none; }
+  to { transform: translateY(4%) scale(1.06, 0.85); }
+}
+
+/* ---------- gag: the character's signature trick, played ONCE ---------- */
+.av-beat--gag { --gag-delay: calc(var(--beat-delay, 0ms) * var(--delay-scale, 1)); }
+.av-beat--gag .av-anim--swing .av-part-sole { transform-origin: 30% 90%; animation: av-swing-once 700ms cubic-bezier(0.5, 0, 0.3, 1.4) var(--gag-delay) both; }
+.av-beat--gag .av-anim--swing .av-part-burst { animation: av-pop-once 700ms var(--ease-out) var(--gag-delay) both; }
+.av-beat--gag .av-anim--swing .av-part-whoosh { animation: av-blink-once 700ms steps(4) var(--gag-delay) both; }
+.av-beat--gag .av-anim--float { animation: av-float-once 700ms var(--ease-inout) var(--gag-delay) both; }
+.av-beat--gag .av-anim--float .av-part-shadow { animation: av-shadow-once 700ms var(--ease-inout) var(--gag-delay) both; }
+.av-beat--gag .av-anim--peck .av-part-head { animation: av-peck-once 600ms steps(1, end) var(--gag-delay) both; }
+.av-beat--gag .av-anim--bob { animation: av-bob-once 520ms var(--ease-inout) var(--gag-delay) both; }
+.av-beat--gag .av-anim--bounce { transform-origin: 50% 100%; animation: av-bounce-once 560ms var(--ease-out) var(--gag-delay) both; }
+.av-beat--gag .av-anim--wiggle { transform-origin: 50% 100%; animation: av-wiggle-once 620ms var(--ease-out) var(--gag-delay) both; }
+.av-beat--gag .av-anim--sway { transform-origin: 50% 100%; animation: av-sway-once 700ms var(--ease-inout) var(--gag-delay) both; }
+.av-beat--gag .av-anim--sneak { animation: av-sneak-once 700ms var(--ease-inout) var(--gag-delay) both; }
+.av-beat--gag .av-anim--flash .av-part-flash { animation: av-pop-once 600ms var(--ease-out) var(--gag-delay) both; }
+.av-beat--gag .av-anim--fizz .av-part-spark { animation: av-fizz-once 600ms steps(6) var(--gag-delay) both; }
+.av-beat--gag .av-part-chancla { transform-origin: 20% 100%; animation: av-wiggle-once 620ms var(--ease-out) var(--gag-delay) both; }
+.av-beat--gag .av-part-bubble { animation: av-pop-once 600ms var(--ease-out) var(--gag-delay) both; }
+.av-beat--gag .av-part-smoke { animation: av-blink-once 600ms steps(4) var(--gag-delay) both; }
+.av-beat--gag .av-part-signal { animation: av-blink-once 600ms steps(4) var(--gag-delay) both; }
+
+@keyframes av-swing-once { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-9deg); } 60% { transform: rotate(10deg); } 80% { transform: rotate(-3deg); } }
+@keyframes av-pop-once { 0%, 30%, 100% { transform: scale(1); } 50% { transform: scale(1.18) rotate(6deg); } 70% { transform: scale(0.96); } }
+@keyframes av-blink-once { 0%, 100% { opacity: 1; } 25%, 75% { opacity: 0.45; } 50% { opacity: 1; } }
+@keyframes av-float-once { 0%, 100% { transform: translateY(0); } 45% { transform: translateY(-8%); } }
+@keyframes av-shadow-once { 0%, 100% { transform: scaleX(1); opacity: 1; } 45% { transform: scaleX(0.7); opacity: 0.5; } }
+@keyframes av-peck-once { 0%, 50%, 100% { transform: translate(0, 0); } 25%, 75% { transform: translate(7%, 3%); } }
+@keyframes av-bob-once { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4%); } }
+@keyframes av-bounce-once { 0%, 100% { transform: translateY(0) scale(1, 1); } 40% { transform: translateY(-6%) scale(0.97, 1.03); } 65% { transform: translateY(0) scale(1.04, 0.96); } }
+@keyframes av-wiggle-once { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(-6deg); } 45% { transform: rotate(5deg); } 70% { transform: rotate(-2deg); } }
+@keyframes av-sway-once { 0%, 100% { transform: rotate(0); } 30% { transform: rotate(-4deg); } 70% { transform: rotate(4deg); } }
+@keyframes av-sneak-once { 0%, 100% { transform: translateX(0); } 30% { transform: translateX(-4%); } 65% { transform: translateX(4%); } }
+@keyframes av-fizz-once { 0%, 100% { transform: scale(1) rotate(0); } 17%, 50%, 83% { transform: scale(1.25) rotate(20deg); } 33%, 67% { transform: scale(1) rotate(0); } }
+
+/* Reduced motion: every beat becomes a 120ms opacity blink (slump keeps its desaturation). */
+@media (prefers-reduced-motion: reduce) {
+  .av .av-beat { animation: av-beat-blink 120ms linear both !important; animation-delay: calc(var(--beat-delay, 0ms) * 0.5) !important; }
+  .av .av-beat * { animation: none !important; }
+}
+@keyframes av-beat-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }

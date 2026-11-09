@@ -8,18 +8,31 @@ import { CoachTip } from '../components/coach/CoachTip';
 import { Masthead, Stamp } from '../components/Paper';
 import { AwardsList } from '../components/mechanics';
 import { sfx } from '../lib/sound';
+import { haptic } from '../lib/haptics';
 import './GameOver.css';
+
+/** podium reactions land on the WINNER stamp's impact frame (slam at 1500ms + ~260ms) */
+const PODIUM_BEAT_MS = 1760;
 
 export function GameOver() {
   const { game, you, actions, toast } = useGame();
   const { players, isHost } = usePlayers();
+  // win fanfare + haptic only on the winners' phones; everyone else gets a softer cue
+  const wonAtOpen = !!game && !!you && (game.winners?.length ? game.winners : [...game.players].sort((a, b) => b.score - a.score).slice(0, 1).map((p) => p.id)).includes(you.playerId);
   useEffect(() => {
     sfx.paper();
     const t = setTimeout(() => {
       sfx.flash();
-      sfx.win();
+      if (wonAtOpen) {
+        sfx.win();
+        haptic('win');
+      } else {
+        sfx.lose();
+        haptic('lose');
+      }
     }, 600);
     return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   if (!game || !you) return null;
   const ranked = [...players].sort((a, b) => b.score - a.score);
@@ -62,7 +75,7 @@ export function GameOver() {
               <span className="podium__photo polaroid">
                 <span className="pin pin--red" aria-hidden="true" />
                 <span className="polaroid__photo">
-                  <Avatar avatar={p.avatar} color={p.color} size={place === 1 ? 88 : 66} label={p.name} className="podium__av" mood={winnerIds.includes(p.id) ? 'win' : 'idle'} animated />
+                  <Avatar avatar={p.avatar} color={p.color} size={place === 1 ? 88 : 66} label={p.name} className="podium__av" mood={winnerIds.includes(p.id) ? 'win' : 'idle'} beat={{ id: winnerIds.includes(p.id) ? 'gloat' : 'slump', key: 'final', delay: PODIUM_BEAT_MS }} />
                 </span>
               </span>
               <b className="podium__name">{p.name}</b>
@@ -108,7 +121,7 @@ export function GameOver() {
         <div className="share-card__body">
           {me && (
             <span className="share-card__mug">
-              <Avatar avatar={me.avatar} color={me.color} size={64} label="" mood={iWon ? 'win' : 'idle'} />
+              <Avatar avatar={me.avatar} color={me.color} size={64} label="" mood={iWon ? 'win' : 'idle'} beat={{ id: iWon ? 'gloat' : 'slump', key: 'final', delay: 600 }} />
             </span>
           )}
           <div>

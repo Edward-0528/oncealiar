@@ -84,7 +84,7 @@ export interface CharacterArt {
   draw: (p: DrawProps) => React.ReactNode;
   /** where the spy mask sits (120 space) */
   mask: { x: number; y: number; rot?: number; s?: number };
-  /** idle animation flavour (see avatars.css) */
+  /** signature "gag" trick, played once on the gag beat (see avatars.css) */
   anim: 'swing' | 'float' | 'bob' | 'peck' | 'bounce' | 'wiggle' | 'sway' | 'flash' | 'sneak' | 'fizz';
   /** short visual description for screen readers */
   alt: string;

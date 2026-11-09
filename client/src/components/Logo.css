@@ -9,8 +9,7 @@
   position: relative;
   text-shadow: 0 4px 0 var(--accent-deep);
 }
-.logo--lg { font-size: clamp(72px, 22vw, 128px); }
-.logo--sm { font-size: 26px; }
+.logo--lg { font-size: clamp(72px, 22vw, 128px); } /* the logotype is art, not a type-scale step */
+.logo--sm { font-size: var(--fs-d3); }
 .logo--sm .logo__liar { text-shadow: none; }
-.logo--lg .logo__liar { transform: rotate(-3deg); }
-.logo--lg .mask-mark { animation: bob 3s ease-in-out infinite; }
+.logo--lg .logo__liar { transform: rotate(calc(var(--tilt) * -1)); } /* Home's one hero artefact */

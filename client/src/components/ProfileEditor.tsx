@@ -5,7 +5,7 @@ import { Icon } from './Icon';
 import { PremiumModal } from './PremiumModal';
 import { avatarNoun, codename, colorVar, retargetCodename } from '../lib/profile';
 import { sfx } from '../lib/sound';
-import { buzz } from '../lib/haptics';
+import { haptic } from '../lib/haptics';
 import { useGameOptional } from '../state/GameProvider';
 import './ProfileEditor.css';
 
@@ -208,7 +208,7 @@ export function ProfileEditor({
   };
 
   const pickTile = (a: AvatarId) => {
-    buzz(8);
+    haptic('tick');
     if (locked) {
       if (peek === a) return;
       sfx.tap();
@@ -222,7 +222,7 @@ export function ProfileEditor({
 
   const shuffle = () => {
     sfx.pop();
-    buzz(12);
+    haptic('tick');
     const pool = (premiumOk ? [...AVATARS, ...PREMIUM_AVATARS] : [...AVATARS]) as AvatarId[];
     const fresh = pool.filter((a) => a !== value.avatar && !taken.includes(a));
     const a = pick(fresh.length ? fresh : pool.filter((x) => x !== value.avatar), Math.random);

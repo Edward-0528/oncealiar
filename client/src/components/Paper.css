@@ -1,32 +1,50 @@
-/* Incoming reaction stamps */
-.rstamps { position: fixed; inset: 0; pointer-events: none; z-index: 70; overflow: hidden; }
+/* Incoming reaction stamps: a fixed lane along the top edge (over the top bar, never over content) */
+.rstamps {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 4px);
+  left: 0;
+  right: 0;
+  z-index: 70;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 0 12px;
+  pointer-events: none;
+  overflow: hidden;
+}
 .rstamp {
-  position: absolute;
+  flex: 0 1 auto;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  animation: rstamp-life 2.8s ease forwards;
+  gap: 3px;
+  /* slam in (inner .stamp--slam), hold, then a quick exit — no drifting */
+  animation: rstamp-life 2.8s linear forwards;
 }
-.rstamp__mark { font-size: clamp(30px, 9vw, 46px); border-width: 5px; box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.18); }
+.rstamp__mark { font-size: var(--fs-d4); border-width: 4px; white-space: nowrap; }
 .rstamp__who {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  max-width: 100%;
   padding: 2px 8px 2px 3px;
   background: var(--ink);
   color: var(--news);
   font-family: var(--font-type);
-  font-size: 12px;
+  font-size: var(--fs-meta);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   animation: fade-in 0.2s ease 0.3s both;
 }
 [data-theme='midnight'] .rstamp__who { background: var(--surface-3); color: var(--text); }
 @keyframes rstamp-life {
-  0%, 78% { opacity: 1; }
-  100% { opacity: 0; transform: translateY(-10px); }
+  0%, 88% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: scale(0.9); }
 }
-/* the previous floating-emoji layer (Overlays.tsx) is superseded by stamps */
-.floaters { display: none; }
 @media (prefers-reduced-motion: reduce) {
-  .rstamp { animation: none; }
+  .rstamp { animation: rstamp-fade 2.8s linear forwards; }
+  @keyframes rstamp-fade { 0%, 88% { opacity: 1; } 100% { opacity: 0; } }
 }

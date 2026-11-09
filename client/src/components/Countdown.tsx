@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useCountdown } from '../state/hooks';
 import { sfx } from '../lib/sound';
+import { tick as tickEl } from '../lib/motion';
 import './Countdown.css';
 
 interface Props {
@@ -20,10 +21,14 @@ export function CountdownRing({ endsAt, totalSeconds, size = 120, tick, children
   const frac = ms === null ? 1 : Math.min(1, ms / (totalSeconds * 1000));
   const urgent = secs !== null && secs <= 5;
   const lastTick = useRef<number | null>(null);
+  const ringRef = useRef<HTMLDivElement>(null);
 
+  // last 5 s: one 120ms scale tick per second, on the same frame as the tick sound
   useEffect(() => {
-    if (!tick || secs === null || secs > 5 || secs === lastTick.current || secs === 0) return;
+    if (secs === null || secs > 5 || secs === lastTick.current || secs === 0) return;
     lastTick.current = secs;
+    tickEl(ringRef.current);
+    if (!tick) return;
     if (secs <= 3) sfx.tickUrgent();
     else sfx.tick();
   }, [secs, tick]);
@@ -32,7 +37,7 @@ export function CountdownRing({ endsAt, totalSeconds, size = 120, tick, children
   const r = (size - stroke) / 2;
   const circ = 2 * Math.PI * r;
   return (
-    <div className={`ring ${urgent ? 'ring--urgent' : ''}`} style={{ width: size, height: size }}>
+    <div ref={ringRef} className={`ring ${urgent ? 'ring--urgent' : ''}`} style={{ width: size, height: size }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
         <circle className="ring__track" cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={stroke} />
         <circle
@@ -62,10 +67,13 @@ export function CountdownRing({ endsAt, totalSeconds, size = 120, tick, children
 export function TimerPill({ endsAt, tick }: { endsAt: number | null; tick?: boolean }) {
   const ms = useCountdown(endsAt);
   const lastTick = useRef<number | null>(null);
+  const pillRef = useRef<HTMLSpanElement>(null);
   const secs = ms === null ? null : Math.ceil(ms / 1000);
   useEffect(() => {
-    if (!tick || secs === null || secs > 5 || secs === 0 || secs === lastTick.current) return;
+    if (secs === null || secs > 5 || secs === 0 || secs === lastTick.current) return;
     lastTick.current = secs;
+    tickEl(pillRef.current);
+    if (!tick) return;
     if (secs <= 3) sfx.tickUrgent();
     else sfx.tick();
   }, [secs, tick]);
@@ -73,7 +81,7 @@ export function TimerPill({ endsAt, tick }: { endsAt: number | null; tick?: bool
   const m = Math.floor(secs / 60);
   const s = String(secs % 60).padStart(2, '0');
   return (
-    <span className={`timer-pill ${secs <= 10 ? 'timer-pill--urgent' : ''}`} role="timer" aria-label={`${secs} seconds left`}>
+    <span ref={pillRef} className={`timer-pill ${secs <= 10 ? 'timer-pill--urgent' : ''}`} role="timer" aria-label={`${secs} seconds left`}>
       <span className="timer-pill__dot" aria-hidden="true" />
       {String(m).padStart(2, '0')}:{s}
     </span>

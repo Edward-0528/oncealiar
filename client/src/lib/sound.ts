@@ -5,6 +5,9 @@ import { KEYS, loadJSON, saveJSON } from './storage';
 
 type Wave = OscillatorType;
 let ctx: AudioContext | null = null;
+/** Master bus: every sound → master gain → compressor → speakers (never straight to destination). */
+let bus: GainNode | null = null;
+const MASTER_GAIN = 0.85;
 let muted = loadJSON<boolean>(KEYS.muted, false);
 const listeners = new Set<(m: boolean) => void>();
 
@@ -36,6 +39,27 @@ function audio(): AudioContext | null {
   return ctx;
 }
 
+/** The shared master input. Built lazily; falls back to the destination if nodes are unsupported. */
+function out(ac: AudioContext): AudioNode {
+  if (bus) return bus;
+  try {
+    const master = ac.createGain();
+    master.gain.value = MASTER_GAIN;
+    const comp = ac.createDynamicsCompressor();
+    // gentle glue + peak catcher so stacked sfx (stamps, arps) never clip or spike
+    comp.threshold.value = -18;
+    comp.knee.value = 12;
+    comp.ratio.value = 4;
+    comp.attack.value = 0.004;
+    comp.release.value = 0.2;
+    master.connect(comp).connect(ac.destination);
+    bus = master;
+    return bus;
+  } catch {
+    return ac.destination;
+  }
+}
+
 /** Call from a user gesture once so iOS lets us play later. */
 export function unlockAudio() {
   audio();
@@ -63,7 +87,7 @@ function tone({ freq, to, dur = 0.14, type = 'sine', gain = 0.12, delay = 0 }: T
   g.gain.setValueAtTime(0.0001, t);
   g.gain.exponentialRampToValueAtTime(gain, t + 0.012);
   g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  osc.connect(g).connect(ac.destination);
+  osc.connect(g).connect(out(ac));
   osc.start(t);
   osc.stop(t + dur + 0.02);
 }
@@ -87,7 +111,7 @@ function noise(dur = 0.3, gain = 0.08, from = 400, to = 3000, type: BiquadFilter
   const g = ac.createGain();
   g.gain.setValueAtTime(gain, t);
   g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  src.connect(filter).connect(g).connect(ac.destination);
+  src.connect(filter).connect(g).connect(out(ac));
   src.start(t);
 }
 
@@ -98,8 +122,9 @@ export const sfx = {
   tap: () => tone({ freq: 520, to: 680, dur: 0.06, type: 'triangle', gain: 0.07 }),
   pop: () => tone({ freq: 380, to: 920, dur: 0.12, type: 'sine', gain: 0.14 }),
   join: () => arp([523, 784], 0.07, 'triangle', 0.1),
-  tick: () => tone({ freq: 1100, dur: 0.04, type: 'square', gain: 0.03 }),
-  tickUrgent: () => tone({ freq: 1500, dur: 0.06, type: 'square', gain: 0.05 }),
+  // triangle, not square: same clock-tick read without the piercing odd harmonics
+  tick: () => tone({ freq: 1000, dur: 0.04, type: 'triangle', gain: 0.05 }),
+  tickUrgent: () => tone({ freq: 1250, dur: 0.06, type: 'triangle', gain: 0.07 }),
   whoosh: () => noise(0.35, 0.09, 300, 3200),
   flip: () => noise(0.12, 0.08, 1800, 600),
   /** Velvet curtain: a soft low swish, then a tiny drumroll-and-ting as it reopens. */
@@ -119,13 +144,19 @@ export const sfx = {
     tone({ freq: 165, to: 123, dur: 0.9, type: 'sawtooth', gain: 0.05, delay: 0.05 });
   },
   win: () => arp([523, 659, 784, 1047, 1319], 0.08, 'triangle', 0.12),
-  lose: () => arp([392, 330, 262, 196], 0.14, 'sine', 0.1),
+  /** Soft, short "not this time" — gentler than win so nobody's phone feels like a punishment. */
+  lose: () => arp([392, 330, 262], 0.14, 'sine', 0.07),
   toast: () => tone({ freq: 880, dur: 0.08, type: 'sine', gain: 0.05 }),
   /** Rubber stamp: low body thump + short papery slap. */
   stamp: () => {
     tone({ freq: 150, to: 48, dur: 0.16, type: 'sine', gain: 0.32 });
     tone({ freq: 90, to: 40, dur: 0.12, type: 'triangle', gain: 0.18 });
     noise(0.07, 0.16, 2400, 500, 'lowpass');
+  },
+  /** Quieter stamp for bursts (see lib/stampThrottle). */
+  stampSoft: () => {
+    tone({ freq: 140, to: 50, dur: 0.1, type: 'sine', gain: 0.1 });
+    noise(0.05, 0.05, 2200, 600, 'lowpass');
   },
   /** One typewriter key strike (call repeatedly for typing). */
   type: () => {

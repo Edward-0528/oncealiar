@@ -3,7 +3,7 @@ import { useGame, usePlayers, useTopic } from '../state/GameProvider';
 import { TopicGrid } from '../components/TopicGrid';
 import { Avatar } from '../components/Avatar';
 import { Icon } from '../components/Icon';
-import { buzz } from '../lib/haptics';
+import { haptic } from '../lib/haptics';
 import { sfx } from '../lib/sound';
 import { AVATAR_INFO, SCORE, type AvatarId } from '@oncealiar/shared';
 import { CoachTip } from '../components/coach/CoachTip';
@@ -43,13 +43,9 @@ export function RoleReveal() {
 
   const show = () => {
     if (!seen) {
-      if (liar) {
-        buzz([90, 60, 180]);
-        sfx.liar();
-      } else {
-        buzz(40);
-        sfx.reveal();
-      }
+      // identical cue for every role: a different sound or buzz would tell the room who the Spy is
+      haptic('thud');
+      sfx.reveal();
     } else sfx.paper();
     window.setTimeout(() => sfx.stamp(), 260);
     setSeen(true);
@@ -86,7 +82,8 @@ export function RoleReveal() {
       <CoachTip phase="role-reveal" role={you.role} />
 
       <button
-        className={`rcard ${revealed ? 'is-flipped' : ''} ${liar ? 'rcard--liar' : ''}`}
+        /* the role class exists ONLY while the private face is showing: the closed card (and its DOM) is identical for every role */
+        className={`rcard ${revealed ? 'is-flipped' : ''} ${revealed ? (liar ? 'rcard--liar' : 'rcard--agent') : ''}`}
         onPointerDown={onDown}
         onPointerUp={onUp}
         onPointerLeave={() => !sticky && revealed && setRevealed(false)}
@@ -116,9 +113,6 @@ export function RoleReveal() {
             {revealed &&
               (liar ? (
                 <span className="dossier dossier--spy">
-                  <Stamp rot={9} className="dossier__stamp" slam>
-                    Classified
-                  </Stamp>
                   <span className="dossier__id">
                     <span className="dossier__photo">
                       {me && <Avatar avatar={me.avatar} color={me.color} size={58} masked label="You, masked" />}
@@ -133,7 +127,12 @@ export function RoleReveal() {
                   </span>
                   <span className="dossier__role">
                     <span className="type dossier__k">ASSIGNED ROLE</span>
-                    <span className="display rcard__liar-title">The Spy</span>
+                    <span className="dossier__role-row">
+                      <span className="display rcard__liar-title">The Spy</span>
+                      <Stamp rot={-8} className="dossier__stamp" slam>
+                        Classified
+                      </Stamp>
+                    </span>
                   </span>
                   <span className="dossier__facts type">
                     <span>TOPIC: {topic ? topic.name : <Redacted text="HARD MODE" label="Topic hidden: hard mode" />}</span>
@@ -156,16 +155,16 @@ export function RoleReveal() {
                 </span>
               ) : (
                 <span className="dossier dossier--agent">
-                  <Stamp tone="blue" rot={8} className="dossier__stamp" slam>
-                    Cleared
-                  </Stamp>
-                  <span className="dossier__lines type">
-                    <span>
-                      AGENT: {me?.name}
-                      {me && AVATAR_INFO[me.avatar as AvatarId] ? ` · ALIAS: ${AVATAR_INFO[me.avatar as AvatarId].name}` : ''}
+                  {/* stamp sits IN FLOW beside the lines, so it can never cover ALIAS */}
+                  <span className="dossier__head">
+                    <span className="dossier__lines type">
+                      <span>AGENT: {me?.name}</span>
+                      {me && AVATAR_INFO[me.avatar as AvatarId] && <span>ALIAS: {AVATAR_INFO[me.avatar as AvatarId].name}</span>}
+                      <span>TOPIC: {topic ? topic.name : '—'}</span>
                     </span>
-                    <span>ASSIGNED ROLE: AGENT</span>
-                    <span>TOPIC: {topic ? topic.name : '—'}</span>
+                    <Stamp tone="blue" rot={-8} className="dossier__stamp" slam>
+                      Cleared
+                    </Stamp>
                   </span>
                   <span className="dossier__role">
                     <span className="type dossier__k">CODEWORD</span>

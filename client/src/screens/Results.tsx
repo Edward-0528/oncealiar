@@ -3,13 +3,15 @@ import type { Player, RoundResult } from '@oncealiar/shared';
 import { useGame, usePlayers } from '../state/GameProvider';
 import { useReducedMotion } from '../state/hooks';
 import { Avatar } from '../components/Avatar';
+import { useBeatCues, type BeatCue } from '../components/avatars/beats';
 import { Confetti } from '../components/Confetti';
 import { AnimatedNumber } from '../components/AnimatedNumber';
 import { Icon } from '../components/Icon';
 import { ReactionBar } from '../components/Dock';
 import { sfx } from '../lib/sound';
-import { buzz } from '../lib/haptics';
+import { haptic } from '../lib/haptics';
 import { colorVar } from '../lib/profile';
+import { staggerDelay } from '../lib/motion';
 import { CoachTip } from '../components/coach/CoachTip';
 import { Stamp } from '../components/Paper';
 import { RoundNotes, ScoreBreakdown } from '../components/mechanics';
@@ -27,45 +29,57 @@ function VotesStage({ result, players }: { result: RoundResult; players: Player[
   }, [result.votes]);
   const targets = players.filter((p) => tally.has(p.id)).sort((a, b) => (tally.get(b.id)!.length - tally.get(a.id)!.length));
   const byId = (id: string) => players.find((p) => p.id === id);
+  // vote chips land one after another (160ms apart); the target flinches as each lands,
+  // and the accused recoils when the ACCUSED stamp slams.
   let delay = 0;
+  const chipDelays = new Map<string, number[]>();
+  targets.forEach((t) => chipDelays.set(t.id, tally.get(t.id)!.filter((v) => byId(v)).map(() => (delay += 160))));
+  const stampAt = delay + 400;
   return (
     <div className="stage stage--votes">
       <h2 className="display h2">The votes are in</h2>
       {targets.length === 0 && <p className="dim">Nobody voted!</p>}
       <div className="vote-targets">
-        {targets.map((t) => {
-          const voters = tally.get(t.id)!;
-          const accused = t.id === result.accusedId;
-          return (
-            <div key={t.id} className={`vote-target polaroid ${accused ? 'is-accused' : ''}`} style={{ ['--pc' as string]: colorVar(t.color) }}>
-              <span className="polaroid__photo">
-                <Avatar avatar={t.avatar} color={t.color} size={72} label={t.name} mood={accused ? 'caught' : 'idle'} />
-              </span>
-              <b className="vote-target__name">{t.name}</b>
-              <div className="vote-target__voters" aria-label={`${voters.length} vote${voters.length > 1 ? 's' : ''}`}>
-                {voters.map((v) => {
-                  const vp = byId(v);
-                  delay += 160;
-                  return vp ? (
-                    <span key={v} className="vote-chip" style={{ animationDelay: `${delay}ms` }} title={vp.name}>
-                      <Avatar avatar={vp.avatar} color={vp.color} size={24} label={`${vp.name} voted`} />
-                    </span>
-                  ) : null;
-                })}
-              </div>
-              {accused && (
-                <Stamp rot={-12} slam delay={delay + 400} className="vote-target__stamp">
-                  Accused
-                </Stamp>
-              )}
-            </div>
-          );
-        })}
+        {targets.map((t) => (
+          <VoteTarget key={t.id} target={t} voters={tally.get(t.id)!.map(byId).filter((p): p is Player => !!p)} chipDelays={chipDelays.get(t.id)!} accused={t.id === result.accusedId} stampAt={stampAt} />
+        ))}
       </div>
-      {!result.accusedId && <p className="display h3 anim-pop" style={{ animationDelay: `${delay + 400}ms` }}>Hung jury! Nobody was accused.</p>}
+      {!result.accusedId && <p className="display h3 anim-pop" style={{ animationDelay: `${stampAt}ms` }}>Hung jury! Nobody was accused.</p>}
     </div>
   );
 }
+
+function VoteTarget({ target: t, voters, chipDelays, accused, stampAt }: { target: Player; voters: Player[]; chipDelays: number[]; accused: boolean; stampAt: number }) {
+  // chip lands ~60% into its 0.6s fly; the stamp's impact frame is ~55% into its 0.48s slam
+  const cues = useMemo<BeatCue[]>(
+    () => [...chipDelays.map((d) => ({ at: d + 360, id: 'flinch' as const })), ...(accused ? [{ at: stampAt + 260, id: 'accused' as const }] : [])],
+    [chipDelays.join(','), accused, stampAt] // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const beat = useBeatCues(cues);
+  return (
+    <div className={`vote-target polaroid ${accused ? 'is-accused' : ''}`} style={{ ['--pc' as string]: colorVar(t.color) }}>
+      <span className="polaroid__photo">
+        <Avatar avatar={t.avatar} color={t.color} size={72} label={t.name} mood={accused ? 'caught' : 'idle'} beat={beat} />
+      </span>
+      <b className="vote-target__name">{t.name}</b>
+      <div className="vote-target__voters" aria-label={`${voters.length} vote${voters.length > 1 ? 's' : ''}`}>
+        {voters.map((vp, i) => (
+          <span key={vp.id} className="vote-chip" style={{ animationDelay: `${chipDelays[i]}ms` }} title={vp.name}>
+            <Avatar avatar={vp.avatar} color={vp.color} size={24} label={`${vp.name} voted`} />
+          </span>
+        ))}
+      </div>
+      {accused && (
+        <Stamp rot={-10} slam delay={stampAt} className="vote-target__stamp">
+          Accused
+        </Stamp>
+      )}
+    </div>
+  );
+}
+
+/** spin/scale reveal, on the camera-flash frame (sfx.flash at 950ms; mask comes off at 1s) */
+const UNMASK_BEAT = { id: 'unmask', key: 'reveal', delay: 950 } as const;
 
 function WantedPoster({ liar, size = 150, unmask, mood, caption }: { liar: Player; size?: number; unmask?: boolean; mood?: 'caught' | 'win'; caption?: React.ReactNode }) {
   return (
@@ -73,7 +87,7 @@ function WantedPoster({ liar, size = 150, unmask, mood, caption }: { liar: Playe
       <span className="wanted__title">Wanted</span>
       <span className="wanted__photo">
         {unmask && <span className="wanted__flash" aria-hidden="true" />}
-        <Avatar avatar={liar.avatar} color={liar.color} size={size} masked={unmask} maskClassName="unmask__mask" label={liar.name} mood={mood} />
+        <Avatar avatar={liar.avatar} color={liar.color} size={size} masked={unmask} maskClassName="unmask__mask" label={liar.name} mood={mood} beat={unmask ? UNMASK_BEAT : undefined} />
       </span>
       <span className="wanted__name">{liar.name}</span>
       {caption && <span className="wanted__cap">{caption}</span>}
@@ -142,7 +156,7 @@ export function Results() {
     if (stage === 'votes') sfx.paper();
     if (stage === 'unmask') {
       sfx.liar();
-      buzz([40, 30, 120]);
+      haptic('slam');
     }
     if (stage === 'votes') window.setTimeout(() => sfx.stamp(), 1400);
     if (stage === 'word') {
@@ -153,7 +167,7 @@ export function Results() {
       sfx.stamp();
       if (iWon) sfx.win();
       else sfx.lose();
-      buzz(iWon ? [30, 30, 30, 30, 90] : 200);
+      haptic(iWon ? 'win' : 'lose');
     }
   }, [stage, result, iWon]);
 
@@ -245,7 +259,7 @@ export function Results() {
                     <li
                       key={p.id}
                       className={`scores__row ${p.id === you.playerId ? 'is-you' : ''} ${spy ? 'is-spy' : ''}`}
-                      style={{ animationDelay: `${i * 70}ms`, ['--from' as string]: `${((p.score - d) / top) * 100}%`, ['--to' as string]: `${(p.score / top) * 100}%`, ['--d' as string]: `${400 + i * 90}ms` }}
+                      style={{ animationDelay: `${staggerDelay(i, 70)}ms`, ['--to' as string]: `${(p.score / top) * 100}%`, ['--d' as string]: `${400 + staggerDelay(i, 90)}ms`, ['--k' as string]: p.score > 0 ? Math.max(0, (p.score - d) / p.score) : 0 }}
                     >
                       <span className="scores__name">
                         {p.name}
@@ -257,7 +271,7 @@ export function Results() {
                       <span className="scores__nums">
                         <span className={`scores__delta ${d > 0 ? '' : 'is-zero'}`}>+{d}</span>
                         <span className="scores__total display" aria-label={`${p.score} points`}>
-                          <AnimatedNumber from={p.score - d} to={p.score} delay={500 + i * 90} />
+                          <AnimatedNumber from={p.score - d} to={p.score} delay={500 + staggerDelay(i, 90)} />
                         </span>
                       </span>
                       <span className="scores__why">

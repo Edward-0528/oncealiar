@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useGame, usePlayers, useTopic } from '../state/GameProvider';
-import { useReducedMotion } from '../state/hooks';
 import { TimerPill } from '../components/Countdown';
 import { TopicGrid } from '../components/TopicGrid';
 import { Avatar } from '../components/Avatar';
@@ -9,53 +8,17 @@ import { CoachTip } from '../components/coach/CoachTip';
 import { sfx } from '../lib/sound';
 import './Phases.css';
 
-/** Types `text` one character at a time (with key clicks), then holds. */
-function Typewriter({ text, sound, speed = 70 }: { text: string; sound?: boolean; speed?: number }) {
-  const reduced = useReducedMotion();
-  const [n, setN] = useState(reduced ? text.length : 0);
-  useEffect(() => {
-    if (reduced) return setN(text.length);
-    setN(0);
-    let i = 0;
-    const id = window.setInterval(() => {
-      i += 1;
-      setN(i);
-      if (sound && text[i - 1] && text[i - 1] !== ' ') sfx.type();
-      if (i >= text.length) {
-        window.clearInterval(id);
-        if (sound) sfx.ding();
-      }
-    }, speed);
-    return () => window.clearInterval(id);
-  }, [text, sound, speed, reduced]);
+/**
+ * Calm waiting state for everyone but the Spy. No invented "is it X?" guesses, no typewriter
+ * clicks on every phone — the drama is the Spy's face, so point eyes there.
+ */
+function SpyIsGuessing() {
   return (
-    <span className="typewriter" aria-hidden="true">
-      {text.slice(0, n)}
-      <span className="typewriter__caret" />
-    </span>
-  );
-}
-
-function SpyIsGuessing({ words }: { words: string[] }) {
-  const [k, setK] = useState(0);
-  useEffect(() => {
-    if (!words.length) return;
-    const id = window.setInterval(() => setK((x) => x + 1), 2600);
-    return () => window.clearInterval(id);
-  }, [words.length]);
-  const w = words.length ? words[(k * 7 + 3) % words.length] : '';
-  return (
-    <>
-      <p className="display h2 guess__typed">
-        <span className="sr-only">The spy is guessing…</span>
-        <Typewriter text="The spy is guessing…" sound />
-      </p>
-      {w && (
-        <p className="type guess__mutter" aria-hidden="true">
-          <Typewriter key={k} text={`Hmm… is it ${w.toUpperCase()}?`} speed={55} />
-        </p>
-      )}
-    </>
+    <div className="guess__waiting" role="status">
+      <span className="guess__pulse" aria-hidden="true" />
+      <p className="display h3 guess__waiting-h">The Spy is making their last guess</p>
+      <p className="type guess__waiting-sub">Look up and watch their face.</p>
+    </div>
   );
 }
 
@@ -85,14 +48,14 @@ export function LiarGuess() {
         <CoachTip phase="liar-guess" role={you.role} />
         <div className="guess__suspect folder">
           <div className="folder__body">
-            <Stamp rot={8} className="guess__stamp">
+            <Stamp rot={-8} className="guess__stamp">
               In custody
             </Stamp>
             <p className="type guess__lede">…but the spy gets one last shot. If they name the codeword, they steal the round.</p>
-            <SpyIsGuessing words={words} />
+            <SpyIsGuessing />
           </div>
         </div>
-        {words.length > 0 && <TopicGrid words={words} scanning label="Words the spy is choosing from" />}
+        {words.length > 0 && <TopicGrid words={words} label="Words the spy is choosing from" />}
       </main>
     );
   }
@@ -110,7 +73,7 @@ export function LiarGuess() {
         </div>
       </header>
       <CoachTip phase="liar-guess" role={you.role} />
-      <div className="folder guess__file">
+      <div className="folder guess__file spy-face">
         <div className="folder__body guess__file-body">
           <Stamp rot={-7} slam className="guess__stamp">
             Cover blown
@@ -124,7 +87,7 @@ export function LiarGuess() {
         </div>
       </div>
       {locked ? (
-        <div className="card center stack anim-pop guess__locked">
+        <div className="card card--hero center stack anim-pop guess__locked spy-face">
           <span className="eyebrow">Locked in</span>
           <p className="display h1">
             <span className="hl">{pick}</span>
@@ -138,7 +101,7 @@ export function LiarGuess() {
             selectable
             selected={pick}
             onSelect={(w) => {
-              sfx.type();
+              sfx.tap();
               setPick(w);
             }}
             label="Guess the codeword"

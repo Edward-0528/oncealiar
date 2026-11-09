@@ -12,17 +12,16 @@
 }
 .topbar__room { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .topbar__code {
-  font-size: 22px;
+  font-size: var(--fs-d4);
   letter-spacing: 0.14em;
   padding: 5px 10px 4px 12px;
   border-radius: var(--radius-xs);
   background: var(--ink);
   color: var(--news);
   border: var(--border-w) solid var(--ink);
-  transform: rotate(calc(var(--tilt) * -2));
 }
 [data-theme='midnight'] .topbar__code, [data-theme='cozy'] .topbar__code { background: var(--surface); color: var(--text); }
-.topbar__room .chip { font-family: var(--font-type); font-weight: 400; font-size: 14px; }
+.topbar__room .chip { font-family: var(--font-type); font-weight: 400; font-size: var(--fs-meta); }
 .topbar__actions { display: flex; gap: 8px; }
 .topbar__actions .icon-btn { width: 44px; height: 44px; }
 @media (max-width: 350px) {
@@ -42,7 +41,7 @@
   background: var(--paper);
   text-align: left;
   min-height: 64px;
-  transition: transform 0.15s var(--spring);
+  transition: transform var(--dur-fast) var(--ease-out);
 }
 [data-theme='midnight'] .theme-opt, [data-theme='cozy'] .theme-opt { border: 2px solid var(--line); background: var(--surface); }
 .theme-opt:active { transform: scale(0.98); }
@@ -50,8 +49,8 @@
 .theme-opt__sw { display: flex; border-radius: var(--radius-xs); overflow: hidden; border: 2px solid var(--ink); flex-shrink: 0; }
 .theme-opt__sw span { width: 14px; height: 36px; }
 .theme-opt__txt { display: flex; flex-direction: column; flex: 1; min-width: 0; }
-.theme-opt__txt b { font-family: var(--font-display); font-weight: var(--display-weight); text-transform: var(--display-transform); font-size: 19px; letter-spacing: 0.02em; }
-.theme-opt__txt small { color: var(--text-faint); font-size: 13px; }
+.theme-opt__txt b { font-family: var(--font-display); font-weight: var(--display-weight); text-transform: var(--display-transform); font-size: var(--fs-d4); letter-spacing: 0.02em; }
+.theme-opt__txt small { color: var(--text-faint); font-size: var(--fs-meta); }
 .topbar { flex-wrap: wrap; }
 .topbar__warm { flex-basis: 100%; order: 3; }
 .topbar__warm:not(:has(.mx-warmup)) { display: none; }
