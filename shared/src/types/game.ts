@@ -78,6 +78,10 @@ export interface GameSettings {
   warmupRound: boolean;
   /** play the animated group tutorial before the first game in a room */
   briefing: boolean;
+  /** win condition: first player to reach this many points at the end of a round wins
+   *  (ties at the top play another round). 0 = play exactly `roundsPerGame` rounds.
+   *  With a target, `roundsPerGame` is ignored and MAX_ROUNDS_TARGET caps the game. */
+  targetScore: number;
 }
 
 export const DEFAULT_SETTINGS: GameSettings = {
@@ -94,7 +98,8 @@ export const DEFAULT_SETTINGS: GameSettings = {
   liarSeesTopic: true,
   familyFriendly: true,
   warmupRound: true,
-  briefing: true
+  briefing: true,
+  targetScore: 15
 };
 
 /** A topic card: 16 related words. Everyone sees the grid; truth-tellers also
@@ -179,6 +184,10 @@ export interface RoundResult {
   lockedGuesses?: Record<PlayerID, string>;
   /** why each player scored: every non-zero line, in order (sums to scoreDeltas) */
   scoreBreakdown?: Record<PlayerID, ScoreLine[]>;
+  /** server-computed: true when this round ended the game (next step is game-over, not
+   *  another round). Covers roundsPerGame, first-to-targetScore (ties at the top play on)
+   *  and the MAX_ROUNDS_TARGET cap — clients should use this, not round.number vs roundsPerGame. */
+  endsGame?: boolean;
 }
 
 export interface PublicRound {
@@ -213,6 +222,10 @@ export interface PublicGameState {
   premium?: boolean;
   /** set at game-over */
   awards?: Award[];
+  /** true once the host ended the session (room:end, or the host left mid-game): the
+   *  game is at game-over with final standings and the room is read-only — every
+   *  gameplay/host action is rejected; players can only leave. */
+  sessionEnded?: boolean;
 }
 
 export interface PrivateView {
@@ -254,7 +267,7 @@ export interface RoomPeekInfo {
   serverNow: number;
   maxPlayers: number;
   premium: boolean;
-  settings: Pick<GameSettings, 'roundsPerGame' | 'clueMode'>;
+  settings: Pick<GameSettings, 'roundsPerGame' | 'clueMode'> & { targetScore?: number };
   players: Pick<Player, 'id' | 'name' | 'avatar' | 'color' | 'isHost' | 'score' | 'connected' | 'presence'>[];
 }
 

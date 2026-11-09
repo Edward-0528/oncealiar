@@ -1,8 +1,11 @@
 import React from 'react';
 import { Sheet } from './Sheet';
 
-/** Host-only confirm: closes the room and sends every phone back to the home screen. */
-export function EndSessionSheet({ open, onClose, onConfirm }: { open: boolean; onClose: () => void; onConfirm: () => void }) {
+/**
+ * Host-only confirm. In the lobby the room closes and every phone goes home; mid-game
+ * (`midGame`) the server ends the session and every phone lands on the final scores.
+ */
+export function EndSessionSheet({ open, onClose, onConfirm, midGame = false }: { open: boolean; onClose: () => void; onConfirm: () => void; midGame?: boolean }) {
   return (
     <Sheet
       open={open}
@@ -20,7 +23,11 @@ export function EndSessionSheet({ open, onClose, onConfirm }: { open: boolean; o
         </>
       }
     >
-      <p className="dim">The room closes and every phone goes back to the home screen. Anyone can host a new game after.</p>
+      <p className="dim">
+        {midGame
+          ? 'Everyone goes to the final scores. The game can’t be resumed after.'
+          : 'The room closes and every phone goes back to the home screen. Anyone can host a new game after.'}
+      </p>
     </Sheet>
   );
 }

@@ -9,6 +9,7 @@ import { ReactionStampLayer } from './Paper';
 import { WarmupBadge } from './mechanics';
 import { Toggle } from '../screens/SettingsSheet';
 import { coachTipsEnabled, setCoachTipsEnabled } from './coach/coachStore';
+import { roundChipLabel } from '../lib/gameEnd';
 import { THEMES, applyTheme, loadTheme, type ThemeId } from '../lib/theme';
 import './TopBar.css';
 
@@ -66,6 +67,9 @@ export function TopBar() {
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const r = game?.round;
+  const ended = !!game?.sessionEnded;
+  // the host leaving / ending once a round has started sends everyone to the final scores
+  const midGame = !!r && r.phase !== 'lobby' && r.phase !== 'briefing' && !ended;
 
   return (
     <header className="topbar">
@@ -76,7 +80,7 @@ export function TopBar() {
           </span>
           {r && r.number > 0 && r.phase !== 'game-over' && (
             <span className="chip">
-              Rd {r.number}/{game.settings.roundsPerGame}
+              {roundChipLabel(game.settings, r.number)}
             </span>
           )}
         </div>
@@ -115,7 +119,7 @@ export function TopBar() {
             <Icon name="door" /> Leave room
           </button>
         )}
-        {game && isHost && (
+        {game && isHost && !ended && (
           <button className="btn btn--danger btn--block" onClick={() => setConfirmEnd(true)}>
             End session for everyone
           </button>
@@ -145,9 +149,18 @@ export function TopBar() {
           </>
         }
       >
-        <p className="dim">{isHost ? 'You’re the host — someone else will take over.' : 'You can rejoin with the room code while the game is running.'}</p>
+        <p className="dim">
+          {ended
+            ? 'This session is over. You’ll go back to the home screen.'
+            : isHost && midGame
+              ? 'Leaving ends the game for everyone and shows the final scores. Want someone else to host instead? Tap their tile → Make host.'
+              : isHost
+                ? 'You’re the host — someone else will take over.'
+                : 'You can rejoin with the room code while the game is running.'}
+        </p>
       </Sheet>
       <EndSessionSheet
+        midGame={midGame}
         open={confirmEnd}
         onClose={() => setConfirmEnd(false)}
         onConfirm={() => {

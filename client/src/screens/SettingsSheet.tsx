@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import type { GameSettings } from '@oncealiar/shared';
+import { TARGET_SCORES, type GameSettings } from '@oncealiar/shared';
+import { targetOf } from '../lib/gameEnd';
 import { useGame, usePlayers } from '../state/GameProvider';
 import { Sheet } from '../components/Sheet';
 import { Icon } from '../components/Icon';
@@ -35,6 +36,52 @@ export function Toggle({ label, hint, checked, onChange }: { label: string; hint
   );
 }
 
+type WinChoice = number | 'rounds';
+
+/** First to 10 / 15 / 20 points, or a fixed number of rounds (shows the rounds stepper). */
+export function WinCondition({ settings: s, onChange: set }: { settings: GameSettings; onChange: (patch: Partial<GameSettings>) => void }) {
+  const target = targetOf(s);
+  const value: WinChoice = target > 0 ? target : 'rounds';
+  const options: WinChoice[] = [...TARGET_SCORES, 'rounds'];
+  return (
+    <>
+      <div className="field">
+        <span className="field__label">Win condition</span>
+        <div className="seg seg--win" role="radiogroup" aria-label="Win condition">
+          {options.map((o) => (
+            <button
+              key={String(o)}
+              role="radio"
+              aria-checked={o === value}
+              className={`seg__opt ${o === value ? 'is-on' : ''}`}
+              onClick={() => set({ targetScore: o === 'rounds' ? 0 : o })}
+            >
+              {o === 'rounds' ? 'Fixed rounds' : `First to ${o}`}
+            </button>
+          ))}
+        </div>
+        <small className="faint">{target > 0 ? `First to ${target} points wins. A tie at the top plays one more round.` : `Highest score after ${s.roundsPerGame} round${s.roundsPerGame === 1 ? '' : 's'} wins.`}</small>
+      </div>
+      {target === 0 && (
+        <div className="field">
+          <span className="field__label">Rounds</span>
+          <div className="stepper">
+            <button className="icon-btn" onClick={() => set({ roundsPerGame: Math.max(1, s.roundsPerGame - 1) })} aria-label="Fewer rounds" disabled={s.roundsPerGame <= 1}>
+              <Icon name="minus" />
+            </button>
+            <output className="display h2 stepper__val" aria-live="polite">
+              {s.roundsPerGame}
+            </output>
+            <button className="icon-btn" onClick={() => set({ roundsPerGame: Math.min(10, s.roundsPerGame + 1) })} aria-label="More rounds" disabled={s.roundsPerGame >= 10}>
+              <Icon name="plus" />
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { game, actions } = useGame();
   const { players } = usePlayers();
@@ -53,20 +100,7 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
           <PresetPicker playerCount={players.length} settings={s} onApply={set} />
         </div>
 
-        <div className="field">
-          <span className="field__label">Rounds</span>
-          <div className="stepper">
-            <button className="icon-btn" onClick={() => set({ roundsPerGame: Math.max(1, s.roundsPerGame - 1) })} aria-label="Fewer rounds" disabled={s.roundsPerGame <= 1}>
-              <Icon name="minus" />
-            </button>
-            <output className="display h2 stepper__val" aria-live="polite">
-              {s.roundsPerGame}
-            </output>
-            <button className="icon-btn" onClick={() => set({ roundsPerGame: Math.min(10, s.roundsPerGame + 1) })} aria-label="More rounds" disabled={s.roundsPerGame >= 10}>
-              <Icon name="plus" />
-            </button>
-          </div>
-        </div>
+        <WinCondition settings={s} onChange={set} />
 
         <Segmented label="Clue mode" value={s.clueMode} options={['spoken', 'typed'] as const} onChange={(v) => set({ clueMode: v })} format={(v) => (v === 'spoken' ? 'Say it out loud' : 'Type it')} />
         <Segmented label="Time per clue" value={s.clueSeconds} options={[15, 20, 30, 45, 60]} onChange={(v) => set({ clueSeconds: v })} format={secs} />

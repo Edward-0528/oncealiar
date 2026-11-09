@@ -4,13 +4,13 @@ import { useGame, usePlayers } from '../state/GameProvider';
 import { useReducedMotion } from '../state/hooks';
 import { Avatar } from '../components/Avatar';
 import { useBeatCues, type BeatCue } from '../components/avatars/beats';
-import { AnimatedNumber } from '../components/AnimatedNumber';
+import { RaceBoard } from '../components/RaceBoard';
+import { gameEndsAfterResults, targetOf } from '../lib/gameEnd';
 import { Icon } from '../components/Icon';
 import { ReactionBar } from '../components/Dock';
 import { sfx } from '../lib/sound';
 import { haptic } from '../lib/haptics';
 import { colorVar } from '../lib/profile';
-import { staggerDelay } from '../lib/motion';
 import { CoachTip } from '../components/coach/CoachTip';
 import { Stamp } from '../components/Paper';
 import { RoundNotes, ScoreBreakdown } from '../components/mechanics';
@@ -174,7 +174,8 @@ export function Results() {
   const liars = liarIds.map((id) => byId(id)).filter(Boolean) as Player[];
   const liarName = liars.map((l) => l.name).join(' & ') || 'The spy';
   const liarWins = result.winner === 'liar';
-  const last = game.round.number >= game.settings.roundsPerGame;
+  const last = gameEndsAfterResults(game);
+  const target = targetOf(game.settings);
   const ranked = [...players].sort((a, b) => b.score - a.score);
   const practice = !!game.round.practice;
   const showSummary = stage === 'winner' || stage === 'scores';
@@ -192,7 +193,6 @@ export function Results() {
       ? `${liarName}’s last-ditch guess: “${result.liarGuess}”. Wrong. The agents win.`
       : `The agents caught ${liarName}. Justice is served.`;
   const votesFor = (id: string) => Object.values(result.votes).filter((t) => t === id).length;
-  const top = Math.max(1, ...players.map((p) => p.score));
 
   return (
     <main className="screen screen--wide results">
@@ -248,47 +248,33 @@ export function Results() {
           {stage === 'scores' && (
             <section className="scoreboard" aria-labelledby="scoreboard-h">
               <h2 className="display h3" id="scoreboard-h">
-                The scoreboard
+                {target > 0 ? `Race to ${target}` : 'The scoreboard'}
               </h2>
               {practice && (
                 <p className="scores__practice">
                   <span className="scores__practice-tag">Practice — not counted</span> This round shows how scoring works. Its points don’t count toward anyone’s total.
                 </p>
               )}
-              <ol className="scores__list">
-                {ranked.map((p, i) => {
+              <RaceBoard
+                target={target}
+                rounds={game.round.number}
+                youId={you.playerId}
+                delay={400}
+                rows={ranked.map((p) => {
                   const d = result.scoreDeltas[p.id] ?? 0;
                   // practice round: the breakdown is shown, but totals don't move
                   const gained = practice ? 0 : d;
-                  const spy = liarIds.includes(p.id);
-                  return (
-                    <li
-                      key={p.id}
-                      className={`scores__row ${p.id === you.playerId ? 'is-you' : ''} ${spy ? 'is-spy' : ''}`}
-                      style={{ animationDelay: `${staggerDelay(i, 70)}ms`, ['--to' as string]: `${(p.score / top) * 100}%`, ['--d' as string]: `${400 + staggerDelay(i, 90)}ms`, ['--k' as string]: p.score > 0 ? Math.max(0, (p.score - gained) / p.score) : 0 }}
-                    >
-                      <span className="scores__name">
-                        {p.name}
-                        {spy && <span className="scores__tag">Spy</span>}
-                      </span>
-                      <span className="scores__track" aria-hidden="true">
-                        <span className="scores__bar" />
-                      </span>
-                      <span className="scores__nums">
-                        <span className={`scores__delta ${d > 0 ? '' : 'is-zero'} ${practice ? 'is-practice' : ''}`} aria-label={practice ? `+${d} (practice, not counted)` : undefined}>
-                          +{d}
-                        </span>
-                        <span className="scores__total display" aria-label={`${p.score} points`}>
-                          <AnimatedNumber from={p.score - gained} to={p.score} delay={500 + staggerDelay(i, 90)} />
-                        </span>
-                      </span>
-                      <span className="scores__why">
-                        <ScoreBreakdown result={result} playerId={p.id} compact practice={practice} />
-                      </span>
-                    </li>
-                  );
+                  return {
+                    player: p,
+                    score: p.score,
+                    from: p.score - gained,
+                    delta: d,
+                    practice,
+                    tag: liarIds.includes(p.id) ? <span className="scores__tag">Spy</span> : undefined,
+                    below: <ScoreBreakdown result={result} playerId={p.id} compact practice={practice} />
+                  };
                 })}
-              </ol>
+              />
             </section>
           )}
 

@@ -27,7 +27,7 @@ export interface RoomPeek {
   /** premium rooms allow premium characters */
   premium?: boolean;
   players: Pick<Player, 'id' | 'name' | 'avatar' | 'color' | 'isHost' | 'score' | 'connected' | 'presence'>[];
-  settings?: Pick<GameSettings, 'roundsPerGame' | 'clueMode'>;
+  settings?: Pick<GameSettings, 'roundsPerGame' | 'clueMode'> & { targetScore?: number };
 }
 
 /** Abstracts socket.io so the UI can run against a fake server (mock mode). */

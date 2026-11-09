@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { SCORE } from '@oncealiar/shared';
+import { DEFAULT_SETTINGS, SCORE } from '@oncealiar/shared';
 import { Avatar } from '../Avatar';
 import { Fingerprint, Redacted, Stamp } from '../Paper';
 import { TopicGrid } from '../TopicGrid';
@@ -465,7 +465,7 @@ function GuessScene({ step }: { step: number }) {
             </li>
           ))}
         </ul>
-        <p className="demo-points__foot type">New Spy every round. Most points wins.</p>
+        <p className="demo-points__foot type">New Spy every round. First to {DEFAULT_SETTINGS.targetScore} points wins.</p>
       </div>
     );
   }

@@ -117,13 +117,14 @@ export function Clues() {
 
       <section className={`spotlight ${isMine ? 'spotlight--you' : ''}`} key={currentId}>
         <span className="tape" aria-hidden="true" />
+        {/* corner stamp: lives on the card's top edge, never over the ring or the face */}
+        <Stamp rot={8} slam delay={250} className="spotlight__stamp">
+          On the record
+        </Stamp>
         <div className="spotlight__photo">
           <CountdownRing endsAt={r.phaseEndsAt} totalSeconds={game.settings.clueSeconds} size={168} tick={isMine} label="Turn time left">
             {cur && <Avatar avatar={cur.avatar} color={cur.color} size={110} label={cur.name} className="spotlight__av" beat={{ id: 'nudge', key: r.currentTurn }} />}
           </CountdownRing>
-          <Stamp rot={-10} slam delay={250} className="spotlight__stamp">
-            On the record
-          </Stamp>
         </div>
         <h1 className="display h2 spotlight__title">{isMine ? 'Your turn!' : `${cur?.name ?? '…'}’s turn`}</h1>
         <p className="spotlight__sub type">

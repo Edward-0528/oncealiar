@@ -299,3 +299,61 @@ describe('host controls', () => {
     b.close();
   });
 });
+
+describe('ending the session', () => {
+  /** host + 2 guests, game started (briefing off), at role-reveal */
+  async function startedRoom() {
+    const [a, b, c] = await Promise.all([client(), client(), client()]);
+    const made = await emitAck<any>((ack) => a.emit('room:create', { name: 'Ana', avatar: 'duck', color: 'coral' }, ack));
+    for (const [x, n] of [[b, 'Ben'], [c, 'Cy']] as const)
+      await emitAck<any>((ack) => x.emit('room:join', made.code, { name: n, avatar: 'cat', color: 'sky' }, ack));
+    await until(() => (a.state?.players.length ?? 0) === 3);
+    expect((await emitAck<any>((ack) => a.emit('settings:update', { briefing: false }, ack))).ok).toBe(true);
+    expect((await emitAck<any>((ack) => a.emit('game:start', ack))).ok).toBe(true);
+    await until(() => [a, b, c].every((x) => x.state?.round.phase === 'role-reveal'));
+    return { a, b, c, code: made.code as string };
+  }
+
+  it('room:end mid-game → final results for everyone; read-only; deleted after the last human leaves', async () => {
+    const { a, b, c, code } = await startedRoom();
+    let ended = 0;
+    for (const x of [a, b, c]) x.on('room:ended' as any, () => ended++);
+    expect((await emitAck<any>((ack) => a.emit('room:end', ack))).ok).toBe(true);
+    await until(() => [a, b, c].every((x) => x.state?.round.phase === 'game-over' && x.state.sessionEnded === true));
+    expect(Array.isArray(b.state!.awards)).toBe(true);
+    expect(b.state!.winners!.length).toBe(3); // unfinished round scored nothing: everyone tied at 0
+    expect(ended).toBe(0);
+
+    for (const ev of ['game:start', 'room:end', 'room:addBot'] as const) {
+      const res = await emitAck<any>((ack) => (a.emit as any)(ev, ack));
+      expect(res).toEqual({ ok: false, error: 'This session has ended' });
+    }
+    expect(await emitAck<any>((ack) => a.emit('settings:update', { roundsPerGame: 3 }, ack))).toEqual({ ok: false, error: 'This session has ended' });
+    const late = await client();
+    expect((await emitAck<any>((ack) => late.emit('room:join', code, { name: 'Late', avatar: 'cat', color: 'sky' }, ack))).ok).toBe(false);
+
+    b.emit('room:leave');
+    c.emit('room:leave');
+    await until(() => a.state!.players.filter((p) => p.connected).length === 1);
+    expect(a.state!.players).toHaveLength(3); // standings stay intact
+    expect(srv.manager.rooms.has(code)).toBe(true);
+    a.emit('room:leave');
+    await until(() => !srv.manager.rooms.has(code));
+    for (const x of [a, b, c, late]) x.close();
+  });
+
+  it('host room:leave mid-game ends the session; a host disconnect does not', async () => {
+    const r1 = await startedRoom();
+    r1.a.disconnect(); // phone locked / network blip
+    await until(() => r1.b.state!.players.find((p) => p.name === 'Ana')!.presence === 'away');
+    await new Promise((r) => setTimeout(r, 50));
+    expect(r1.b.state!.sessionEnded).toBeUndefined();
+    expect(r1.b.state!.round.phase).toBe('role-reveal');
+    for (const x of [r1.b, r1.c]) x.close();
+
+    const r2 = await startedRoom();
+    r2.a.emit('room:leave');
+    await until(() => [r2.b, r2.c].every((x) => x.state?.round.phase === 'game-over' && x.state.sessionEnded === true));
+    for (const x of [r2.a, r2.b, r2.c]) x.close();
+  });
+});

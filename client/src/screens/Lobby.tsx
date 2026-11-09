@@ -15,6 +15,7 @@ import { Masthead } from '../components/Paper';
 import { staggerDelay } from '../lib/motion';
 import { BRIEFING_SECONDS } from '../components/demo/GameDemo';
 import { hasRoomPlayed } from '../lib/roomHistory';
+import { targetOf } from '../lib/gameEnd';
 import './Lobby.css';
 
 export function Lobby() {
@@ -150,7 +151,15 @@ export function Lobby() {
         </div>
         <ul className="lobby__facts">
           <li>
-            <b>{s.roundsPerGame}</b> rounds
+            {targetOf(s) > 0 ? (
+              <>
+                First to <b>{targetOf(s)}</b> points
+              </>
+            ) : (
+              <>
+                <b>{s.roundsPerGame}</b> rounds
+              </>
+            )}
           </li>
           <li>{s.clueMode === 'spoken' ? 'Clues out loud' : 'Typed clues'}</li>
           <li>

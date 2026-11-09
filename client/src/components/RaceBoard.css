@@ -1,0 +1,116 @@
+/* Race-to-target scoreboard (Results + Game over). Bars are the hero: thick, full width. */
+.race {
+  --race-av: 30px;
+  --race-track: 22px;
+  --race-score: 48px;
+  --race-gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+.race--hero { --race-av: 44px; --race-track: 34px; --race-score: 56px; --race-gap: 12px; gap: 8px; }
+
+/* header row aligns with the track column so the finish label sits over the line */
+.race__head {
+  display: grid;
+  grid-template-columns: var(--race-av) minmax(0, 1fr) var(--race-score);
+  column-gap: var(--race-gap);
+}
+.race__head-track { grid-column: 2; position: relative; min-height: 22px; }
+.race__finish-label {
+  position: absolute;
+  bottom: 0;
+  left: var(--finish);
+  translate: -100% 0;
+  padding: 1px 6px;
+  background: var(--ink);
+  color: var(--news);
+  font-family: var(--font-type);
+  font-size: var(--fs-meta);
+  white-space: nowrap;
+}
+.race__finish-label b { font-family: var(--font-display); font-weight: 400; font-size: 16px; margin-left: 2px; }
+.race__after { font-family: var(--font-type); font-size: var(--fs-meta); color: var(--text-dim); }
+[data-theme='midnight'] .race__finish-label, [data-theme='cozy'] .race__finish-label { background: var(--surface-3); color: var(--text); }
+
+.race__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.race--hero .race__list { gap: 14px; }
+.race__row {
+  display: grid;
+  grid-template-columns: var(--race-av) minmax(0, 1fr) var(--race-score);
+  column-gap: var(--race-gap);
+  align-items: end;
+}
+.race__av { position: relative; display: grid; place-items: center; align-self: center; }
+.race__crown {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  translate: -50% 0;
+  transform: rotate(-8deg);
+  padding: 0 4px;
+  background: var(--btn-red);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: var(--fs-meta);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  z-index: 2;
+  animation: stamp-slam 0.48s var(--slam) both;
+  animation-delay: calc(var(--d) + var(--dur-slow));
+  --stamp-rot: -8deg;
+}
+.race__main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.race__name { display: flex; align-items: center; gap: 6px; min-width: 0; font-weight: 700; font-size: var(--fs-meta); line-height: 1.2; }
+.race--hero .race__name { font-size: var(--fs-body); }
+.race__name-txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.race__row.is-you .race__name-txt { text-decoration: underline; text-decoration-thickness: 3px; text-decoration-color: var(--siren); text-underline-offset: 3px; }
+
+.race__track {
+  position: relative;
+  height: var(--race-track);
+  background: repeating-linear-gradient(90deg, transparent 0 9px, rgba(17, 17, 17, 0.1) 9px 10px), var(--paper-2);
+  border: 2px solid var(--ink);
+}
+[data-theme='midnight'] .race__track { background: var(--surface-2); border-color: var(--line); }
+.race__bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--ink);
+  transform-origin: left center;
+  animation: race-grow var(--dur-slow) var(--ease-out) both;
+  animation-delay: var(--d);
+}
+[data-theme='midnight'] .race__bar { background: var(--highlight); }
+.race__row.is-lead .race__bar { background: var(--btn-red); }
+/* grows from the old score (--k = old/new) to the new one: transform only */
+@keyframes race-grow { from { transform: scaleX(var(--k, 0)); } to { transform: none; } }
+/* the finish line: a dashed ink rule through every track */
+.race__line {
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  left: var(--finish);
+  width: 0;
+  margin-left: -2px;
+  border-left: 3px dashed var(--ink);
+}
+[data-theme='midnight'] .race__line { border-color: var(--text); }
+
+.race__nums { display: flex; flex-direction: column; align-items: flex-end; justify-content: flex-end; line-height: 1; gap: 2px; }
+.race__score { font-size: var(--fs-d4); line-height: 1; font-variant-numeric: tabular-nums; }
+.race--hero .race__score { font-size: var(--fs-d3); }
+.race__row.is-lead .race__score { color: var(--accent-text); }
+.race__delta { font-family: var(--font-type); font-size: var(--fs-meta); background: var(--hl); color: #111; padding: 0 4px; animation: pop-in var(--dur-base) var(--pop) both; animation-delay: var(--d); }
+.race__delta.is-zero { background: none; color: var(--text-faint); }
+.race__delta.is-practice { background: none; outline: 2px dashed var(--ink); outline-offset: -2px; text-decoration: line-through; }
+.race__below { grid-column: 2 / -1; margin-top: 4px; }
+.race__below:empty { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .race__bar, .race__delta { animation: none; }
+  .race__crown { animation: fade-in var(--dur-fast) ease both; }
+}

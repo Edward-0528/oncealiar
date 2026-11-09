@@ -122,6 +122,26 @@ describe('App (mock mode)', () => {
     renderMock('results', { caught: '1' });
     fireEvent.click(await screen.findByRole('button', { name: /skip/i }));
     expect(await screen.findByText(/exposed!|escaped!|the code!/i)).toBeInTheDocument();
-    expect(screen.getByText(/the scoreboard/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /race to 15/i })).toBeInTheDocument();
+  });
+});
+
+describe('session ended by the host', () => {
+  it('GameOver shows the STOP THE PRESSES banner + Back to home and no rematch', async () => {
+    renderMock('session-ended');
+    expect(await screen.findByText(/stop the presses/i)).toBeInTheDocument();
+    expect(screen.getByText(/these are the final scores/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /back to home/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /play again/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/waiting for the host/i)).not.toBeInTheDocument();
+  });
+
+  it('ending the session mid-game sends the mock to the final scores', async () => {
+    renderMock('clues');
+    fireEvent.click(await screen.findByRole('button', { name: 'Menu' }));
+    fireEvent.click(await screen.findByRole('button', { name: /end session for everyone/i }));
+    expect(await screen.findByText(/everyone goes to the final scores/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^end session$/i }));
+    expect(await screen.findByText(/stop the presses/i)).toBeInTheDocument();
   });
 });

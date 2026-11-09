@@ -163,7 +163,7 @@ export function createApp(opts: AppOptions) {
           serverNow: now,
           maxPlayers: s.settings.maxPlayers,
           premium: !!s.premium,
-          settings: { roundsPerGame: s.settings.roundsPerGame, clueMode: s.settings.clueMode },
+          settings: { roundsPerGame: s.settings.roundsPerGame, clueMode: s.settings.clueMode, targetScore: s.settings.targetScore },
           players: s.players.map((p) => ({
             id: p.id,
             name: p.name,

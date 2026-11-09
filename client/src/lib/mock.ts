@@ -36,6 +36,7 @@ import {
   type Topic
 } from '@oncealiar/shared';
 import type { Transport, TransportEvent } from './transport';
+import { endsAfterThisRound, gameEndsAfterResults, targetOf } from './gameEnd';
 
 const TOPICS: Pick<Topic, 'id' | 'name' | 'emoji' | 'words'>[] = [
   {
@@ -167,7 +168,7 @@ export function createMockTransport(phaseParam: string, params: URLSearchParams,
     st = {
       code,
       players,
-      settings: { ...DEFAULT_SETTINGS, clueMode, packIds: ['starter'], liarSeesTopic: params.get('topic') !== '0', warmupRound: warmupOn, briefing: briefingOn },
+      settings: { ...DEFAULT_SETTINGS, ...(params.get('target') !== null ? { targetScore: Number(params.get('target')) || 0 } : {}), clueMode, packIds: ['starter'], liarSeesTopic: params.get('topic') !== '0', warmupRound: warmupOn, briefing: briefingOn },
       round: { number: 0, phase: 'lobby', phaseEndsAt: null, serverNow: Date.now(), topic: null, turnOrder: [], currentTurn: 0, clues: [], result: null },
       packs: PACKS,
       premium: false
@@ -335,6 +336,8 @@ export function createMockTransport(phaseParam: string, params: URLSearchParams,
     });
     r.scoreDeltas = deltas;
     r.scoreBreakdown = breakdown;
+    // like the server: tell clients whether round:next goes to the final results
+    r.endsGame = endsAfterThisRound({ settings: s.settings, roundNumber: s.round.number, scores: s.players.map((p) => p.score) });
     s.round.result = r;
     setPhase('results', null);
   }
@@ -384,6 +387,13 @@ export function createMockTransport(phaseParam: string, params: URLSearchParams,
       gamesStarted = 1;
       return startBriefing();
     }
+    if (phase === 'session-ended') {
+      // host ended mid-game (round 3): final scores, read-only
+      startRound(3);
+      S().players.forEach((p, i) => (p.score = [9, 6, 11, 4, 8, 3, 7, 2, 10, 1, 5, 4][i] ?? 0));
+      S().sessionEnded = true;
+      return gameOver();
+    }
     startRound(phase === 'game-over' ? 5 : 1);
     const s = S();
     s.players.forEach((p, i) => (p.score = [7, 4, 9, 3, 6, 2, 5, 1, 8, 0, 3, 2][i] ?? 0));
@@ -426,6 +436,9 @@ export function createMockTransport(phaseParam: string, params: URLSearchParams,
     if (S().round.phase === 'liar-guess') finish(pick(S().round.topic!.words));
     if (phase === 'game-over') {
       s.players.forEach((p, i) => (stats[p.id] = { spotted: (i * 3) % 5, spyWins: i % 3 === 1 ? 2 : 0, codewords: i === 2 ? 1 : 0, suspectVotes: (i * 2) % 7 }));
+      // first-to-N games end when someone crosses the line: make the mock final look like that
+      const target = targetOf(s.settings);
+      if (target > 0) s.players.forEach((p, i) => (p.score = Math.round(([0.87, 0.6, 1.07, 0.4, 0.73, 0.27, 0.67, 0.13, 0.93, 0.07, 0.47, 0.33][i] ?? 0) * target)));
       gameOver();
     }
   }
@@ -567,6 +580,12 @@ export function createMockTransport(phaseParam: string, params: URLSearchParams,
           break;
         case 'room:end':
           ack?.({ ok: true });
+          if (s && s.round.phase !== 'lobby' && s.round.phase !== 'game-over') {
+            // mid-game: everyone goes to the final scores; the room turns read-only
+            s.sessionEnded = true;
+            gameOver();
+            break;
+          }
           send({ type: 'room-ended' });
           st = null;
           return;
@@ -647,12 +666,13 @@ export function createMockTransport(phaseParam: string, params: URLSearchParams,
           break;
         case 'round:next':
           if (!s) return;
-          if (s.round.number >= s.settings.roundsPerGame) gameOver();
+          if (gameEndsAfterResults(s)) gameOver();
           else startRound(s.round.number + 1);
           break;
         case 'game:restart':
           if (!s) return;
           s.players.forEach((p) => (p.score = 0));
+          delete s.sessionEnded;
           delete s.winners;
           delete s.awards;
           s.round = { ...s.round, number: 0, phase: 'lobby', phaseEndsAt: null, topic: null, turnOrder: [], clues: [], result: null };

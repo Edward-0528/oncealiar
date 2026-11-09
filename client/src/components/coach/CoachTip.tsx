@@ -22,7 +22,8 @@ function useOptionalGame(): GameStore | null {
 
 /**
  * Contextual "how to play this moment" tip shown inside each phase screen.
- * Screens just render <CoachTip phase role />. Short, role-specific, dismissible,
+ * Screens just render <CoachTip phase role />. A slim "editor's note" strip: TIP label, two lines
+ * max (tap to expand, which also offers "Turn off all tips"), 44px dismiss. Short, dismissible,
  * remembered in localStorage, and automatically off after the player's 2nd game.
  * Returns null when there is nothing to say (or the player turned tips off).
  */
@@ -31,6 +32,7 @@ export function CoachTip({ phase, role }: CoachTipProps) {
   const round = store?.game?.round;
   const code = store?.game?.code ?? '';
   const [coach, setCoach] = useState<CoachState>(loadCoach);
+  const [open, setOpen] = useState(false);
 
   // count games: round 1's role-reveal deadline is unique per game start
   const gameId = round && round.number === 1 && round.phase === 'role-reveal' ? `${code}:${round.phaseEndsAt ?? 0}` : null;
@@ -60,19 +62,23 @@ export function CoachTip({ phase, role }: CoachTipProps) {
   };
 
   return (
-    <aside className="coach-tip" role="note" aria-label="Tip" key={key}>
-      <span className="coach-tip__icon" aria-hidden="true">💡</span>
-      <div className="coach-tip__body">
-        <p className="coach-tip__text">{COACH_COPY[key]}</p>
-        <button type="button" className="coach-tip__off" onClick={() => setCoachTipsEnabled(false)}>
-          Turn off tips
-        </button>
-      </div>
+    <aside className={`coach-tip ${open ? 'is-open' : ''}`} role="note" aria-label="Tip" key={key}>
+      <button type="button" className="coach-tip__main" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+        <span className="coach-tip__label" aria-hidden="true">
+          Tip
+        </span>
+        <span className="coach-tip__text">{COACH_COPY[key]}</span>
+      </button>
       <button type="button" className="coach-tip__close" onClick={dismiss} aria-label="Dismiss tip">
-        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
           <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
         </svg>
       </button>
+      {open && (
+        <button type="button" className="coach-tip__off" onClick={() => setCoachTipsEnabled(false)}>
+          Turn off all tips
+        </button>
+      )}
     </aside>
   );
 }

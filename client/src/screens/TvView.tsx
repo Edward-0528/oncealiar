@@ -75,7 +75,7 @@ export function TvView({ code, transport }: { code: string; transport: Transport
         <h2 className="tv__status display">
           {room === undefined ? 'Connecting…' : room === null ? 'Room not found' : PHASE_LABEL[room.phase]}
           {room && room.phase !== 'lobby' && room.phase !== 'briefing' && room.phase !== 'game-over' && room.settings && (
-            <span className="tv__round"> · Round {room.round} of {room.settings.roundsPerGame}</span>
+            <span className="tv__round"> · Round {room.round}{room.settings.targetScore ? ` · first to ${room.settings.targetScore}` : ` of ${room.settings.roundsPerGame}`}</span>
           )}
         </h2>
         {room === null && <p className="tv__empty">Check the code, or start a new game on a phone.</p>}

@@ -76,6 +76,8 @@ export function spawnBot(opts: BotOptions): Socket<ServerToClientEvents, ClientT
 
   s.on('state', (st: PublicGameState, me: PrivateView) => {
     if (closed) return;
+    // the host ended the session: nothing left to play
+    if (st.sessionEnded) return close();
     // in-lobby bots leave once the humans are gone, so they never keep a room alive
     if (leaveWhenAloneMs > 0) {
       const humans = st.players.some((p) => !p.isBot && p.connected);

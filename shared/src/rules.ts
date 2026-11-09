@@ -17,6 +17,16 @@ export const WARMUP_FACTOR = 1.5;
 export const TWO_SPIES_FROM = 8;
 export const TWO_SPIES_MIN = 7;
 
+/** First-to-N mode: allowed targets and a hard cap so a game can't run forever. */
+export const TARGET_SCORES = [10, 15, 20] as const;
+export const MAX_ROUNDS_TARGET = 20;
+
+/** Lobby patience (screens time out at parties): an away player in the lobby keeps
+ *  their seat this long before going offline (in-game it's AWAY_GRACE_MS)… */
+export const LOBBY_AWAY_GRACE_MS = 10 * 60_000;
+/** …and an offline player is removed from the lobby after this long. */
+export const LOBBY_REMOVE_MS = 15 * 60_000;
+
 /** Points per scoring rule. */
 export const SCORE: Record<ScoreRuleId, number> = {
   'spy-escapes': 3,
