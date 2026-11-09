@@ -23,6 +23,7 @@ import { AWAY_GRACE_MS, AWAY_TURN_MS, LOBBY_AWAY_GRACE_MS, LOBBY_REMOVE_MS } fro
 import { Game, GameError } from './engine/game.js';
 import { isReaction, normalizeCode, randomCode, RateLimiter, sanitizeProfile } from './validation.js';
 import { checkUnlockCode } from './premium.js';
+import type { Accounts } from './accounts.js';
 import { spawnBot } from './botBrain.js';
 
 export interface SocketData {
@@ -40,11 +41,17 @@ interface Room {
   emptySince: number | null;
   /** playerId → socket id */
   sockets: Map<PlayerID, string>;
+  /** playerId → verified account id (signed-in players only) */
+  users: Map<PlayerID, string>;
+  /** this game's result has been written to history */
+  recorded: boolean;
 }
 
 export interface RoomManagerOptions {
   packs: WordPack[];
   premiumCodes?: string[];
+  /** optional accounts backend (history + Party Pass); null/undefined = guests only */
+  accounts?: Accounts | null;
   /** extra wait after the host goes OFFLINE before migrating (default 0: migrate as soon as offline) */
   hostGraceMs?: number;
   /** away → offline (default AWAY_GRACE_MS) */
@@ -81,6 +88,7 @@ export class RoomManager {
   constructor(private io: IO, opts: RoomManagerOptions) {
     this.opts = {
       premiumCodes: [],
+      accounts: null,
       selfUrl: '',
       maxBots: 5,
       endedRoomMs: 10 * 60_000,
@@ -159,7 +167,7 @@ export class RoomManager {
         lobbyAwayGraceMs: this.opts.lobbyAwayGraceMs,
         awayTurnMs: this.opts.awayTurnMs
       });
-      const room: Room = { game, timer: null, emptySince: null, sockets: new Map() };
+      const room: Room = { game, timer: null, emptySince: null, sockets: new Map(), users: new Map(), recorded: false };
       this.rooms.set(code, room);
       const player = game.addPlayer(p, nanoid(24), Date.now());
       this.bind(socket, room, player.id);
@@ -293,6 +301,25 @@ export class RoomManager {
       this.sync(room);
     });
 
+    socket.on('account:link', async (token, ack) => {
+      const accounts = this.opts.accounts;
+      if (!accounts) return reply(ack, { ok: false, error: 'Accounts are not enabled' });
+      const room = socket.data.code ? this.rooms.get(socket.data.code) : undefined;
+      const pid = socket.data.playerId;
+      if (!room || !pid) return reply(ack, { ok: false, error: 'Join a room first' });
+      const user = await accounts.verifyToken(token);
+      if (!user) return reply(ack, { ok: false, error: 'Please sign in again' });
+      if (!this.rooms.has(room.game.code) || !room.game.get(pid)) return reply(ack, { ok: false, error: 'Room not found' });
+      room.users.set(pid, user.id);
+      const premium = await accounts.hasPremium(user.id);
+      if (premium && room.game.get(pid)?.isHost && !room.game.premium && !room.game.sessionEnded) {
+        room.game.setPremium(true);
+        this.io.to(room.game.code).emit('toast', 'Party Pass unlocked for this room!');
+        this.sync(room);
+      }
+      reply<{ premium: boolean }>(ack, { ok: true, premium });
+    });
+
     socket.on('presence', (state) => {
       if (state !== 'visible' && state !== 'hidden') return;
       const room = socket.data.code ? this.rooms.get(socket.data.code) : undefined;
@@ -365,12 +392,40 @@ export class RoomManager {
     return !humans || (g.sessionEndedAt !== null && now - g.sessionEndedAt > this.opts.endedRoomMs);
   }
 
+  /** once per finished game, write each signed-in player's result (fire and forget) */
+  private recordHistory(room: Room, state: ReturnType<Game['publicState']>): void {
+    if (state.round.phase !== 'game-over') {
+      room.recorded = false;
+      return;
+    }
+    const accounts = this.opts.accounts;
+    if (room.recorded || !accounts || state.round.number < 1) return;
+    room.recorded = true;
+    const ranked = [...state.players].sort((a, b) => b.score - a.score);
+    const winners = new Set(state.winners ?? []);
+    for (const [pid, userId] of room.users) {
+      const me = state.players.find((p) => p.id === pid);
+      if (!me) continue;
+      // standard competition ranking: ties share a rank
+      const rank = ranked.findIndex((p) => p.score === me.score) + 1;
+      void accounts.recordGame(userId, {
+        roomCode: state.code,
+        players: state.players.length,
+        rounds: state.round.number,
+        score: me.score,
+        rank,
+        won: winners.has(pid)
+      });
+    }
+  }
+
   sync(room: Room): void {
     const g = room.game;
     const now = Date.now();
     if (!this.rooms.has(g.code)) return;
     if (this.endedSessionDone(room, now)) return this.endRoom(g.code);
     const state = g.publicState(now);
+    this.recordHistory(room, state);
     for (const [pid, sid] of room.sockets) {
       if (!g.get(pid)) continue;
       this.io.to(sid).emit('state', state, g.privateView(pid));

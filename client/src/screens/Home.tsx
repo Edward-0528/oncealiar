@@ -6,6 +6,8 @@ import { Avatar } from '../components/Avatar';
 import { Icon } from '../components/Icon';
 import { HowToPlay } from '../components/HowToPlay';
 import { InstallHint } from '../components/Overlays';
+import { AccountSheet } from '../components/AccountSheet';
+import { useAccount } from '../state/account';
 import { loadRecent, loadSession } from '../lib/storage';
 import { isValidCode } from '../lib/roomCode';
 import { sfx } from '../lib/sound';
@@ -17,7 +19,9 @@ export type Intent = { kind: 'host' } | { kind: 'join'; code: string } | { kind:
 const AUTO_JOIN_DELAY_MS = 300;
 
 export function Home({ onProfile, initialCode = '' }: { onProfile: (intent: Intent) => void; initialCode?: string }) {
-  const { profile, actions, busy, autoProfile } = useGame();
+  const { profile, actions, busy, autoProfile, toast } = useGame();
+  const account = useAccount();
+  const [accountOpen, setAccountOpen] = useState(false);
   const [code, setCode] = useState(initialCode.toUpperCase().slice(0, 4));
   const [failed, setFailed] = useState<string | null>(null);
   const [help, setHelp] = useState(false);
@@ -26,6 +30,28 @@ export function Home({ onProfile, initialCode = '' }: { onProfile: (intent: Inte
 
   const session = useMemo(() => loadSession(), []);
   const recent = useMemo(() => loadRecent().filter((r) => r.code !== session?.code), [session]);
+
+  // back from Stripe Checkout: the webhook may land a moment after the redirect, so check a few times
+  useEffect(() => {
+    const status = new URLSearchParams(window.location.search).get('purchase');
+    if (!status) return;
+    window.history.replaceState(null, '', window.location.pathname);
+    if (status !== 'success') return void toast('Checkout cancelled. You weren’t charged.', 'info');
+    let tries = 0;
+    let stop = false;
+    const poll = async () => {
+      await account.client.init();
+      const me = await account.client.refreshMe();
+      if (me?.premium) return toast('Party Pass unlocked. Thank you!', 'success');
+      if (!stop && ++tries < 8) setTimeout(poll, 2500);
+      else if (!stop) toast('Payment received. Your Party Pass will show up shortly.', 'info');
+    };
+    void poll();
+    return () => {
+      stop = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => () => {
     if (autoTimer.current) clearTimeout(autoTimer.current);
@@ -49,6 +75,12 @@ export function Home({ onProfile, initialCode = '' }: { onProfile: (intent: Inte
 
   return (
     <main className="screen home">
+      {account.enabled && (
+        <button className="chip home__account" onClick={() => setAccountOpen(true)}>
+          {account.session ? 'Account' : 'Sign in'}
+        </button>
+      )}
+      <AccountSheet open={accountOpen} onClose={() => setAccountOpen(false)} />
       <section className="home__hero anim-rise">
         <Logo />
         <p className="home__tag dim">The party game where someone’s lying.</p>

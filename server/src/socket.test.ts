@@ -357,3 +357,66 @@ describe('ending the session', () => {
     for (const x of [r2.a, r2.b, r2.c]) x.close();
   });
 });
+
+describe('accounts (account:link)', () => {
+  it('links a signed-in host: Party Pass unlocks the room and finished games are recorded', async () => {
+    const recorded: Array<{ userId: string; rec: { rank: number; won: boolean; rounds: number } }> = [];
+    const fake = {
+      verifyToken: async (t: unknown) => (t === 'host-token' ? { id: 'user-host', email: 'h@x.co' } : t === 'guest-token' ? { id: 'user-guest', email: 'g@x.co' } : null),
+      hasPremium: async (id: string) => id === 'user-host',
+      recordGame: async (userId: string, rec: { rank: number; won: boolean; rounds: number }) => void recorded.push({ userId, rec })
+    };
+    const s2 = createApp({ packs: FIXTURE_PACKS, accounts: fake as never });
+    await new Promise<void>((r) => s2.httpServer.listen(0, r));
+    const u = `http://localhost:${(s2.httpServer.address() as AddressInfo).port}`;
+    const mk = () => {
+      const s = connect(u, { transports: ['websocket'], forceNew: true }) as C;
+      s.on('state', (st, v) => {
+        s.state = st;
+        s.view = v;
+      });
+      return new Promise<C>((r) => s.on('connect', () => r(s)));
+    };
+    const link = (s: C, t: string) => new Promise<{ ok: boolean; premium?: boolean; error?: string }>((r) => s.emit('account:link', t, r as never));
+    try {
+      const host = await mk();
+      const guest = await mk();
+      // not in a room yet
+      expect((await link(host, 'host-token')).ok).toBe(false);
+      const created = await new Promise<JoinResult & { ok: boolean }>((r) => host.emit('room:create', profile('Hosty'), r as never));
+      expect(created.ok).toBe(true);
+      await new Promise((r) => guest.emit('room:join', created.code, profile('Guesty'), r as never));
+      expect((await link(host, 'bad')).ok).toBe(false);
+      expect((await link(guest, 'guest-token')).premium).toBe(false);
+      expect(host.state?.premium).toBeFalsy();
+      expect(await link(host, 'host-token')).toMatchObject({ ok: true, premium: true });
+      await until(() => host.state?.premium === true);
+      // the guest's account never unlocks a room it doesn't host
+      expect(srvRoom(s2, created.code).game.premium).toBe(true);
+
+      // play to a finished game: both signed-in players get a history row
+      const third = await mk();
+      await new Promise((r) => third.emit('room:join', created.code, profile('Third'), r as never));
+      await until(() => host.state?.players.length === 3);
+      await new Promise((r) => host.emit('game:start', r as never));
+      await until(() => host.state?.round.phase === 'briefing');
+      for (const c of [host, guest, third]) c.emit('briefing:ready');
+      await until(() => host.state?.round.phase === 'role-reveal');
+      host.emit('room:end');
+      await until(() => host.state?.round.phase === 'game-over');
+      await until(() => recorded.length === 2);
+      expect(recorded.map((r) => r.userId).sort()).toEqual(['user-guest', 'user-host']);
+      expect(recorded[0].rec.rounds).toBe(1);
+    } finally {
+      await s2.close();
+    }
+  });
+});
+
+const profile = (name: string) => ({ name, avatar: 'chancla', color: 'coral' });
+
+function srvRoom(s: ReturnType<typeof createApp>, code: string) {
+  const r = s.manager.rooms.get(code);
+  if (!r) throw new Error('no room');
+  return r;
+}

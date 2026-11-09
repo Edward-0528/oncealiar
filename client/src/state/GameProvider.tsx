@@ -4,6 +4,7 @@ import type { ConnStatus, Transport } from '../lib/transport';
 import { bumpStat, clearSession, forgetRoom, getFlag, loadSession, rememberRoom, saveSession, setFlag } from '../lib/storage';
 import { codename, dedupeName, freeAvatarFallback, loadProfile, profileForRoom, randomProfile, saveProfile } from '../lib/profile';
 import { roomFromLocation } from '../lib/roomCode';
+import { accountClient } from '../lib/account';
 import { isMuted, onMutedChange, setMuted, sfx } from '../lib/sound';
 
 export type ToastTone = 'info' | 'success' | 'error';
@@ -398,6 +399,26 @@ export function GameProvider({ transport, children }: { transport: Transport; ch
       }
     };
   }, [transport, live, withAck, toast, resetLocal, addReaction, adoptGenerated]);
+
+  // ---- signed-in players attach their account to their seat (game history, the host's Party Pass) ----
+  const seatId = you?.playerId ?? null;
+  const roomCode = game?.code ?? null;
+  const linkedFor = useRef('');
+  useEffect(() => {
+    if (!live || conn !== 'connected' || !roomCode || !seatId) return;
+    const link = async () => {
+      const key = `${roomCode}:${seatId}:${accountClient.getSession()?.accessToken ?? ''}`;
+      if (linkedFor.current === key) return;
+      const token = await accountClient.getToken();
+      if (!token) return;
+      linkedFor.current = key;
+      transport.emit('account:link', token, (res) => {
+        if (!res.ok) linkedFor.current = '';
+      });
+    };
+    void link();
+    return accountClient.subscribe(() => void link());
+  }, [live, conn, roomCode, seatId, transport]);
 
   // ---- zero-typing invite: join the linked room as soon as we're connected ----
   useEffect(() => {

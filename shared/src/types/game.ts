@@ -315,4 +315,7 @@ export interface ClientToServerEvents {
   'room:peek': (code: string, ack: (res: { ok: true; room: RoomPeekInfo } | { ok: false; error: string }) => void) => void;
   /** host only: unlock premium for this room with an unlock code */
   'room:unlock': (code: string, ack?: Ack) => void;
+  /** attach a signed-in account (Supabase access token) to this seat: game history, and the
+   *  host's Party Pass unlocks the room. Result says whether the account owns premium. */
+  'account:link': (token: string, ack?: Ack<{ premium: boolean }>) => void;
 }

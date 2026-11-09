@@ -27,6 +27,23 @@ services:
       # Optional paid feature codes (comma-separated); set in the dashboard, never committed.
       - key: PREMIUM_CODES
         sync: false
+      # Accounts + Party Pass (all optional; see docs/accounts-setup.md). Accounts switch on when the
+      # three SUPABASE_* values are set; purchases when the STRIPE_* values and CLIENT_URL are set too.
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_PRICE_ID
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      # Public URL of the client, used for Stripe's success/cancel redirects.
+      - key: CLIENT_URL
+        value: https://oncealiar.onrender.com
 
   # ───────────────────────── client (static) ─────────────────────────
   - type: web

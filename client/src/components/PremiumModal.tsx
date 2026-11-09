@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
 import { Sheet } from './Sheet';
 import { useGame, usePlayers } from '../state/GameProvider';
+import { useAccount } from '../state/account';
+import { AccountSheet, BuyPassButton } from './AccountSheet';
 import './PremiumModal.css';
 
-/** Placeholder upsell. No payments — buying is "coming soon"; hosts can redeem an unlock code. */
+/** Party Pass upsell: one-time purchase tied to an account (when the server has payments on), or a host unlock code. */
 export function PremiumModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { actions, toast, busy } = useGame();
   const { isHost } = usePlayers();
   const [code, setCode] = useState('');
   const [working, setWorking] = useState(false);
+  const { purchase, priceLabel } = useAccount();
+  const [signIn, setSignIn] = useState(false);
 
   return (
     <Sheet open={open} onClose={onClose} title="Premium packs" variant="modal">
@@ -18,20 +22,27 @@ export function PremiumModal({ open, onClose }: { open: boolean; onClose: () => 
           <span>🧙</span>
           <span>🌶️</span>
         </div>
-        <span className="tag premium__kicker">Coming soon</span>
-        <h3 className="display h2 center">Premium packs</h3>
+        <span className="tag premium__kicker">{purchase ? `Party Pass · ${priceLabel}` : 'Coming soon'}</span>
+        <h3 className="display h2 center">{purchase ? 'Unlock the Party Pass' : 'Premium packs'}</h3>
         <p className="dim center">
-          Hundreds of new topics, bigger rooms and party themes. Join the waitlist and we’ll let you know the moment they drop.
+          {purchase
+            ? 'One payment, yours for good. Every premium pack, bigger rooms and extra characters whenever you host. Guests never pay.'
+            : 'Hundreds of new topics, bigger rooms and party themes. Join the waitlist and we’ll let you know the moment they drop.'}
         </p>
-        <button
-          className="btn btn--gold btn--block"
-          onClick={() => {
-            toast('Waitlist opens soon — thanks for the interest!', 'success');
-            onClose();
-          }}
-        >
-          Join the waitlist
-        </button>
+        {purchase ? (
+          <BuyPassButton onNeedSignIn={() => setSignIn(true)} />
+        ) : (
+          <button
+            className="btn btn--gold btn--block"
+            onClick={() => {
+              toast('Waitlist opens soon — thanks for the interest!', 'success');
+              onClose();
+            }}
+          >
+            Join the waitlist
+          </button>
+        )}
+        <AccountSheet open={signIn} onClose={() => setSignIn(false)} />
         {isHost && (
           <form
             className="premium__code"

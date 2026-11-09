@@ -18,7 +18,9 @@ export default defineConfig({
         ws: true
       },
       // wake-up probe (see src/lib/wake.ts)
-      '/healthz': 'http://localhost:3001'
+      '/healthz': 'http://localhost:3001',
+      // accounts + Stripe checkout (server/src/accounts.ts)
+      '/api': 'http://localhost:3001'
     }
   }
 });

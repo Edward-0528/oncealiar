@@ -687,6 +687,9 @@ export function createMockTransport(phaseParam: string, params: URLSearchParams,
             return;
           }
           break;
+        case 'account:link':
+          ack?.({ ok: true, premium: false });
+          return;
         case 'reaction':
           return; // GameProvider echoes locally
       }
