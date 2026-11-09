@@ -561,6 +561,15 @@ export function createMockTransport(phaseParam: string, params: URLSearchParams,
           if (s) Object.assign(s.settings, a[0]);
           ack?.({ ok: true });
           break;
+        case 'player:makeHost':
+          if (s) for (const p of s.players) p.isHost = p.id === a[0];
+          ack?.({ ok: true });
+          break;
+        case 'room:end':
+          ack?.({ ok: true });
+          send({ type: 'room-ended' });
+          st = null;
+          return;
         case 'room:addBot':
           targetPlayers = Math.min(s?.settings.maxPlayers ?? 12, targetPlayers + 1);
           ack?.({ ok: true });

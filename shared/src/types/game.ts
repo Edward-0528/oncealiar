@@ -263,6 +263,8 @@ export interface ServerToClientEvents {
   reaction: (reaction: Reaction) => void;
   toast: (message: string) => void;
   kicked: () => void;
+  /** the host ended the session: everyone goes back to the home screen */
+  'room:ended': () => void;
 }
 
 export interface ClientToServerEvents {
@@ -275,6 +277,10 @@ export interface ClientToServerEvents {
   'player:kick': (playerId: PlayerID) => void; // host only
   /** host only, lobby only: add a bot player (for testing with fewer phones) */
   'room:addBot': (ack?: Ack) => void;
+  /** host only: hand the host role to another (human, connected) player */
+  'player:makeHost': (playerId: PlayerID, ack?: Ack) => void;
+  /** host only: end the session for everyone (room is closed) */
+  'room:end': (ack?: Ack) => void;
   'game:start': (ack?: Ack) => void; // host only
   'role:ready': () => void; // during role-reveal
   'briefing:ready': () => void; // during briefing: "I get it" (uses Player.ready)

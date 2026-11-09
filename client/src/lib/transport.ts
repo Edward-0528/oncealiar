@@ -7,6 +7,7 @@ export type TransportEvent =
   | { type: 'reaction'; reaction: Reaction }
   | { type: 'toast'; message: string }
   | { type: 'kicked' }
+  | { type: 'room-ended' }
   | { type: 'conn'; status: ConnStatus }
   /** live only: the stored session could not be resumed (room gone / token expired) */
   | { type: 'session-invalid'; code: string; error: string }

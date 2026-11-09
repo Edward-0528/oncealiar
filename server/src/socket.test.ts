@@ -269,3 +269,33 @@ describe('in-lobby bots', () => {
     guest.close();
   });
 });
+
+describe('host controls', () => {
+  it('hands the host role to another human and ends the session for everyone', async () => {
+    const a = await client();
+    const made = await emitAck<any>((ack) => a.emit('room:create', { name: 'Ana', avatar: 'duck', color: 'coral' }, ack));
+    const b = await client();
+    await emitAck<any>((ack) => b.emit('room:join', made.code, { name: 'Ben', avatar: 'cat', color: 'sky' }, ack));
+    await until(() => (a.state?.players.length ?? 0) === 2);
+    const benId = a.state!.players.find((p) => p.name === 'Ben')!.id;
+
+    // only the host can hand it off
+    expect((await emitAck<any>((ack) => b.emit('player:makeHost', benId, ack))).ok).toBe(false);
+    expect((await emitAck<any>((ack) => a.emit('player:makeHost', benId, ack))).ok).toBe(true);
+    await until(() => !!b.state?.players.find((p) => p.id === benId)?.isHost);
+    expect(b.state!.players.filter((p) => p.isHost)).toHaveLength(1);
+
+    // Ana is no longer host: she can't end it; Ben can
+    expect((await emitAck<any>((ack) => a.emit('room:end', ack))).ok).toBe(false);
+    let endedA = 0;
+    let endedB = 0;
+    a.on('room:ended' as any, () => endedA++);
+    b.on('room:ended' as any, () => endedB++);
+    expect((await emitAck<any>((ack) => b.emit('room:end', ack))).ok).toBe(true);
+    await until(() => endedA === 1 && endedB === 1);
+    const peek = await emitAck<any>((ack) => a.emit('room:peek', made.code, ack));
+    expect(peek.ok).toBe(false);
+    a.close();
+    b.close();
+  });
+});

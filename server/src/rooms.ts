@@ -229,6 +229,21 @@ export class RoomManager {
       reply(ack, { ok: true });
     });
 
+    socket.on('player:makeHost', (targetId, ack) =>
+      act((g, pid) => {
+        if (typeof targetId !== 'string') throw new GameError('No such player');
+        g.transferHost(pid, targetId);
+      }, ack)
+    );
+
+    socket.on('room:end', (ack) => {
+      const room = socket.data.code ? this.rooms.get(socket.data.code) : undefined;
+      const pid = socket.data.playerId;
+      if (!room || !pid || !room.game.get(pid)?.isHost) return reply(ack, { ok: false, error: 'Only the host can end the game' });
+      reply(ack, { ok: true });
+      this.endRoom(room.game.code);
+    });
+
     socket.on('game:start', (ack) => act((g, pid, now) => g.start(pid, now), ack));
     socket.on('briefing:ready', () => act((g, pid, now) => g.briefingReady(pid, now)));
     socket.on('role:ready', () => act((g, pid, now) => g.ready(pid, now)));
@@ -351,6 +366,21 @@ export class RoomManager {
       }
       if (changed) this.sync(room);
     }
+  }
+
+  /** close a room for everyone: each socket is told and unbound, then the room is deleted */
+  endRoom(code: string): void {
+    const room = this.rooms.get(code);
+    if (!room) return;
+    for (const sid of room.sockets.values()) {
+      const s = this.io.sockets.sockets.get(sid) as GameSocket | undefined;
+      if (!s) continue;
+      s.emit('room:ended');
+      s.leave(code);
+      s.data = {};
+    }
+    room.sockets.clear();
+    this.deleteRoom(code);
   }
 
   private deleteRoom(code: string): void {

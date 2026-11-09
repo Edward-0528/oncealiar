@@ -394,6 +394,18 @@ export class Game {
     this.removePlayer(targetId, now);
   }
 
+  /** host hands the role to another connected human */
+  transferHost(byId: PlayerID, targetId: PlayerID): void {
+    this.requireHost(byId);
+    const t = this.get(targetId);
+    if (!t) throw new GameError('No such player');
+    if (t.isBot) throw new GameError("A bot can't be the host");
+    if (!t.connected) throw new GameError(`${t.name} isn't connected`);
+    if (t.id === byId) return;
+    this.setHost(t.id);
+    this.toasts.push(`${t.name} is now the host`);
+  }
+
   setHost(id: PlayerID): void {
     const p = this.mustGet(id);
     for (const x of this.players) x.isHost = false;

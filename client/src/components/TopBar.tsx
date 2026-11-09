@@ -3,6 +3,7 @@ import { useGame, usePlayers } from '../state/GameProvider';
 import { Icon } from './Icon';
 import { MuteButton } from './Overlays';
 import { HowToPlay } from './HowToPlay';
+import { EndSessionSheet } from './EndSessionSheet';
 import { Sheet } from './Sheet';
 import { ReactionStampLayer } from './Paper';
 import { WarmupBadge } from './mechanics';
@@ -63,6 +64,7 @@ export function TopBar() {
   const [help, setHelp] = useState(false);
   const [menu, setMenu] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const [confirmEnd, setConfirmEnd] = useState(false);
   const r = game?.round;
 
   return (
@@ -109,8 +111,13 @@ export function TopBar() {
         </div>
         <CoachToggle />
         {game && (
-          <button className="btn btn--ghost btn--block" onClick={() => setConfirmLeave(true)}>
+          <button className="btn btn--secondary btn--block" onClick={() => setConfirmLeave(true)}>
             <Icon name="door" /> Leave room
+          </button>
+        )}
+        {game && isHost && (
+          <button className="btn btn--danger btn--block" onClick={() => setConfirmEnd(true)}>
+            End session for everyone
           </button>
         )}
       </Sheet>
@@ -140,6 +147,15 @@ export function TopBar() {
       >
         <p className="dim">{isHost ? 'You’re the host — someone else will take over.' : 'You can rejoin with the room code while the game is running.'}</p>
       </Sheet>
+      <EndSessionSheet
+        open={confirmEnd}
+        onClose={() => setConfirmEnd(false)}
+        onConfirm={() => {
+          setConfirmEnd(false);
+          setMenu(false);
+          actions.endSession();
+        }}
+      />
     </header>
   );
 }

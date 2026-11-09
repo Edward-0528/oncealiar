@@ -147,6 +147,7 @@ export function spawnBot(opts: BotOptions): Socket<ServerToClientEvents, ClientT
     log(`[${name}] kicked`);
     close();
   });
+  s.on('room:ended', () => close());
   s.on('connect_error', (e) => log(`[${name}] connect error: ${e.message}`));
   return s;
 }
