@@ -1,0 +1,97 @@
+/* Discussion: a reaction slams full screen over a dim scrim, holds, and leaves (~1.1s total). */
+.rsplash {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: var(--scrim);
+  pointer-events: none; /* keep tapping the pad underneath */
+  overflow: hidden;
+  animation: rsplash-life 1.1s linear both;
+}
+.rsplash__stack { position: relative; display: flex; flex-direction: column; align-items: center; gap: 18px; max-width: 100%; }
+.rsplash__stamp {
+  min-width: 70vw;
+  max-width: calc(100vw - 32px);
+  justify-content: center;
+  text-align: center;
+  font-size: clamp(56px, 19vw, 120px);
+  line-height: 1;
+  padding: 10px 18px 6px;
+  border-width: 8px;
+  background: var(--paper);
+  box-shadow: var(--e2);
+}
+.rsplash__stamp.stamp--solid { background: var(--ink); color: var(--news); }
+.rsplash__more {
+  position: absolute;
+  top: -18px;
+  right: -6px;
+  padding: 2px 10px;
+  background: var(--btn-red);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: var(--fs-d3);
+  line-height: 1.1;
+  border: 3px solid var(--ink);
+  rotate: 6deg;
+  animation: pop-in var(--dur-fast) var(--pop) both;
+}
+.rsplash__who {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100vw - 32px);
+  padding: 4px 14px 4px 4px;
+  background: var(--ink);
+  color: var(--news);
+  font-family: var(--font-type);
+  font-size: var(--fs-d4);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  animation: fade-in var(--dur-fast) ease 0.2s both;
+}
+[data-theme='midnight'] .rsplash__who { background: var(--surface-3); color: var(--text); }
+@keyframes rsplash-life {
+  0% { opacity: 0; }
+  10%, 84% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rsplash__stamp { animation: none; }
+  .rsplash__more, .rsplash__who { animation: none; }
+}
+
+/* Discussion reaction pad: big tiles that fill the space under the clue list */
+.rpad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; width: 100%; }
+.rpad__btn {
+  --c: var(--ink);
+  min-height: 72px;
+  min-width: 0;
+  padding: 6px 4px;
+  border: var(--border-w) solid var(--ink);
+  border-radius: var(--radius-btn);
+  background: var(--paper);
+  color: var(--c);
+  box-shadow: var(--e1);
+  font-family: var(--font-display);
+  font-weight: var(--display-weight);
+  font-size: clamp(22px, 6.4vw, 30px);
+  letter-spacing: 0.03em;
+  line-height: 1;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  transition: transform var(--dur-press) var(--ease-out), box-shadow var(--dur-press) var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+}
+.rpad__btn--red { --c: var(--siren-ink); border-color: var(--siren); }
+.rpad__btn--blue { --c: var(--stamp-blue-ink); border-color: var(--stamp-blue); }
+.rpad__btn--solid { background: var(--ink); color: var(--news); }
+.rpad__btn:active { transform: translate(3px, 3px); box-shadow: var(--e-press); }
+.rpad__btn:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+[data-theme='midnight'] .rpad__btn, [data-theme='cozy'] .rpad__btn { background: var(--surface); }
+@media (max-width: 340px) { .rpad { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

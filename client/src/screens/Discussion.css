@@ -23,7 +23,7 @@
 .discuss__sheet { padding-bottom: 8px; }
 .discuss__shield { margin: 0; font-size: var(--fs-meta); color: var(--text-dim); }
 
-.discuss__react { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.discuss__react { display: flex; flex-direction: column; gap: 8px; }
 
 /* clearly labelled host control (not a ghost link) */
 .discuss__host { font-size: var(--fs-d4); }

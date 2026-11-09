@@ -31,8 +31,8 @@ function Router() {
   const { game, you, transport, restoring, joining } = useGame();
   const [intent, setIntent] = useState<Intent | null>(transport.initialView === 'profile' ? { kind: 'edit' } : null);
   useGameFx();
-  // keep phones awake for the whole game (lobby → results); browsers drop the lock when hidden, we re-take it
-  useWakeLock(!!game && game.round.phase !== 'game-over');
+  // keep phones awake the whole time you're in a room (lobby through game over); see lib/wakeLock.ts
+  useWakeLock(!!game);
   const roomParam = typeof window !== 'undefined' ? roomFromLocation().code ?? '' : '';
   // every phase starts at the top: without this a phone keeps the lobby's scroll offset
   // (the Start button lives at the bottom) and lands mid-way down the next screen

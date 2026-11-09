@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { RULES_ONE_LINERS, SCORE, SCORE_RULES } from '@oncealiar/shared';
+import { DEFAULT_SETTINGS, RULES_ONE_LINERS, SCORE, SCORE_RULES } from '@oncealiar/shared';
 import { Sheet } from './Sheet';
 import { Avatar } from './Avatar';
 import { Icon } from './Icon';
@@ -75,7 +75,7 @@ const STEPS: { title: string; body: string; tail?: string; art: React.ReactNode 
   },
   {
     title: 'Scoring',
-    body: 'The Spy changes every round, so everyone gets a shot at the big points.',
+    body: `First to ${DEFAULT_SETTINGS.targetScore} points wins the game. The Spy changes every round, so everyone gets a shot at the big points.`,
     tail: 'Stepped away to answer a text? Your seat is kept for 2 minutes.',
     art: (
       <ul className="htp-score">

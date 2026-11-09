@@ -45,3 +45,5 @@
 .pack__txt small { color: var(--text-faint); font-size: var(--fs-meta); }
 .pack.is-locked .pack__emoji { filter: grayscale(0.4); }
 .pack__check { width: 28px; height: 28px; accent-color: var(--ink); flex-shrink: 0; }
+/* win condition: four options; two-line labels are fine, never overflow */
+.seg--win .seg__opt { line-height: 1.15; padding: 4px; min-width: 0; overflow-wrap: anywhere; }

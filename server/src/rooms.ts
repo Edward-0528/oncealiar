@@ -6,7 +6,8 @@
  * Presence: a dropped socket or a `presence('hidden')` makes the player `away`
  * (still in the round); `room:rejoin` / a new socket / `presence('visible')`
  * makes them `online`; the engine turns away players `offline` after
- * awayGraceMs (the room timer wakes at game.nextWakeAt()).
+ * awayGraceMs (lobbyAwayGraceMs in the lobby; the room timer wakes at
+ * game.nextWakeAt()). Offline lobby players are removed after lobbyRemoveMs.
  */
 import type { Server, Socket } from 'socket.io';
 import { nanoid } from 'nanoid';
@@ -18,7 +19,7 @@ import type {
   ServerToClientEvents,
   WordPack
 } from '@oncealiar/shared';
-import { AWAY_GRACE_MS, AWAY_TURN_MS } from '@oncealiar/shared';
+import { AWAY_GRACE_MS, AWAY_TURN_MS, LOBBY_AWAY_GRACE_MS, LOBBY_REMOVE_MS } from '@oncealiar/shared';
 import { Game, GameError } from './engine/game.js';
 import { isReaction, normalizeCode, randomCode, RateLimiter, sanitizeProfile } from './validation.js';
 import { checkUnlockCode } from './premium.js';
@@ -48,8 +49,11 @@ export interface RoomManagerOptions {
   hostGraceMs?: number;
   /** away → offline (default AWAY_GRACE_MS) */
   awayGraceMs?: number;
+  /** away → offline while in the lobby (default LOBBY_AWAY_GRACE_MS, 10 min) */
+  lobbyAwayGraceMs?: number;
   /** clue turn length for a player who is away when it starts (default AWAY_TURN_MS) */
   awayTurnMs?: number;
+  /** offline players are removed from the lobby after this long (default LOBBY_REMOVE_MS, 15 min) */
   lobbyRemoveMs?: number;
   emptyRoomMs?: number;
   sweepMs?: number;
@@ -57,6 +61,8 @@ export interface RoomManagerOptions {
   selfUrl?: string;
   /** max bots per room */
   maxBots?: number;
+  /** an ended session (final results) is deleted after this long at most (default 10 min) */
+  endedRoomMs?: number;
 }
 
 export class RoomManager {
@@ -77,10 +83,12 @@ export class RoomManager {
       premiumCodes: [],
       selfUrl: '',
       maxBots: 5,
+      endedRoomMs: 10 * 60_000,
       hostGraceMs: 0,
       awayGraceMs: AWAY_GRACE_MS,
+      lobbyAwayGraceMs: LOBBY_AWAY_GRACE_MS,
       awayTurnMs: AWAY_TURN_MS,
-      lobbyRemoveMs: 5 * 60_000,
+      lobbyRemoveMs: LOBBY_REMOVE_MS,
       emptyRoomMs: 10 * 60_000,
       sweepMs: 5_000,
       ...opts
@@ -148,6 +156,7 @@ export class RoomManager {
         packs: this.opts.packs,
         idGen: () => nanoid(10),
         awayGraceMs: this.opts.awayGraceMs,
+        lobbyAwayGraceMs: this.opts.lobbyAwayGraceMs,
         awayTurnMs: this.opts.awayTurnMs
       });
       const room: Room = { game, timer: null, emptySince: null, sockets: new Map() };
@@ -162,6 +171,7 @@ export class RoomManager {
       const code = normalizeCode(rawCode);
       const room = code ? this.rooms.get(code) : undefined;
       if (!room) return reply(ack, { ok: false, error: 'Room not found' });
+      if (room.game.sessionEnded) return reply(ack, { ok: false, error: 'This session has ended' });
       const p = sanitizeProfile(profile, { premium: room.game.premium });
       if (!p) return reply(ack, { ok: false, error: 'Invalid name or avatar' });
       try {
@@ -188,7 +198,17 @@ export class RoomManager {
       this.sync(room);
     });
 
-    socket.on('room:leave', () => this.detach(socket, true));
+    socket.on('room:leave', () => {
+      // the host explicitly leaving mid-game ends the session: final results for everyone
+      // (in the lobby the host role migrates as usual; a mere disconnect never ends it)
+      const room = socket.data.code ? this.rooms.get(socket.data.code) : undefined;
+      const pid = socket.data.playerId;
+      const me = room && pid ? room.game.get(pid) : undefined;
+      if (room && me?.isHost && !room.game.sessionEnded && room.game.phase !== 'lobby') {
+        if (!room.game.endSession(Date.now())) return this.endRoom(room.game.code);
+      }
+      this.detach(socket, true);
+    });
 
     socket.on('profile:update', (profile) => {
       const room = socket.data.code ? this.rooms.get(socket.data.code) : undefined;
@@ -221,12 +241,31 @@ export class RoomManager {
       const room = socket.data.code ? this.rooms.get(socket.data.code) : undefined;
       const pid = socket.data.playerId;
       if (!room || !pid || !room.game.get(pid)?.isHost) return reply(ack, { ok: false, error: 'Only the host can add bots' });
+      if (room.game.sessionEnded) return reply(ack, { ok: false, error: 'This session has ended' });
       if (room.game.phase !== 'lobby') return reply(ack, { ok: false, error: 'Bots can only join in the lobby' });
       if (!this.opts.selfUrl) return reply(ack, { ok: false, error: 'Bots are not available on this server' });
       if (room.game.botCount >= this.opts.maxBots) return reply(ack, { ok: false, error: `Up to ${this.opts.maxBots} bots per room` });
       if (room.game.players.length >= room.game.settings.maxPlayers) return reply(ack, { ok: false, error: 'Room is full' });
       spawnBot({ url: this.opts.selfUrl, code: room.game.code, index: room.game.botCount, botKey: this.botKey, leaveWhenAloneMs: 30_000 });
       reply(ack, { ok: true });
+    });
+
+    socket.on('player:makeHost', (targetId, ack) =>
+      act((g, pid) => {
+        if (typeof targetId !== 'string') throw new GameError('No such player');
+        g.transferHost(pid, targetId);
+      }, ack)
+    );
+
+    socket.on('room:end', (ack) => {
+      const room = socket.data.code ? this.rooms.get(socket.data.code) : undefined;
+      const pid = socket.data.playerId;
+      if (!room || !pid || !room.game.get(pid)?.isHost) return reply(ack, { ok: false, error: 'Only the host can end the game' });
+      if (room.game.sessionEnded) return reply(ack, { ok: false, error: 'This session has ended' });
+      reply(ack, { ok: true });
+      // nothing played yet → close the room (room:ended); otherwise final results for everyone
+      if (!room.game.endSession(Date.now())) return this.endRoom(room.game.code);
+      this.sync(room);
     });
 
     socket.on('game:start', (ack) => act((g, pid, now) => g.start(pid, now), ack));
@@ -245,6 +284,7 @@ export class RoomManager {
       const pid = socket.data.playerId;
       if (!room || !pid || !room.game.get(pid)?.isHost)
         return reply(ack, { ok: false, error: 'Only the host can do that' });
+      if (room.game.sessionEnded) return reply(ack, { ok: false, error: 'This session has ended' });
       const ok = await checkUnlockCode(code, this.opts.premiumCodes);
       if (!ok) return reply(ack, { ok: false, error: 'Invalid unlock code' });
       room.game.setPremium(true);
@@ -264,6 +304,7 @@ export class RoomManager {
     socket.on('reaction', (emoji) => {
       const { code, playerId } = socket.data;
       if (!code || !playerId || !isReaction(emoji)) return;
+      if (this.rooms.get(code)?.game.sessionEnded) return;
       const now = Date.now();
       if (!this.reactions.allow(`${code}:${playerId}`, now)) return;
       this.io.to(code).emit('reaction', { playerId, emoji, at: now });
@@ -304,7 +345,11 @@ export class RoomManager {
     room.sockets.delete(playerId);
     this.reactions.forget(`${code}:${playerId}`);
     const now = Date.now();
-    if (leave) room.game.removePlayer(playerId, now);
+    if (leave && room.game.sessionEnded) {
+      // final standings stay intact: the seat stays, just offline
+      room.game.setSocket(playerId, false, now);
+      room.game.goOffline(playerId, now);
+    } else if (leave) room.game.removePlayer(playerId, now);
     else room.game.setSocket(playerId, false, now);
     if (room.game.players.length === 0) return this.deleteRoom(code);
     this.sync(room);
@@ -312,9 +357,19 @@ export class RoomManager {
 
   // ───────────────────────── sync / timers ─────────────────────────
 
+  /** an ended session closes once no human is connected, or after endedRoomMs */
+  private endedSessionDone(room: Room, now: number): boolean {
+    const g = room.game;
+    if (!g.sessionEnded) return false;
+    const humans = g.players.some((p) => !p.isBot && p.connected);
+    return !humans || (g.sessionEndedAt !== null && now - g.sessionEndedAt > this.opts.endedRoomMs);
+  }
+
   sync(room: Room): void {
     const g = room.game;
     const now = Date.now();
+    if (!this.rooms.has(g.code)) return;
+    if (this.endedSessionDone(room, now)) return this.endRoom(g.code);
     const state = g.publicState(now);
     for (const [pid, sid] of room.sockets) {
       if (!g.get(pid)) continue;
@@ -345,12 +400,31 @@ export class RoomManager {
         this.deleteRoom(code);
         continue;
       }
+      if (this.endedSessionDone(room, now)) {
+        this.endRoom(code);
+        continue;
+      }
       if (room.emptySince !== null && now - room.emptySince > this.opts.emptyRoomMs) {
         this.deleteRoom(code);
         continue;
       }
       if (changed) this.sync(room);
     }
+  }
+
+  /** close a room for everyone: each socket is told and unbound, then the room is deleted */
+  endRoom(code: string): void {
+    const room = this.rooms.get(code);
+    if (!room) return;
+    for (const sid of room.sockets.values()) {
+      const s = this.io.sockets.sockets.get(sid) as GameSocket | undefined;
+      if (!s) continue;
+      s.emit('room:ended');
+      s.leave(code);
+      s.data = {};
+    }
+    room.sockets.clear();
+    this.deleteRoom(code);
   }
 
   private deleteRoom(code: string): void {

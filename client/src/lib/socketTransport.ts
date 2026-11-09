@@ -83,6 +83,7 @@ export function createSocketTransport(): Transport {
   socket.on('reaction', (reaction) => send({ type: 'reaction', reaction }));
   socket.on('toast', (message) => send({ type: 'toast', message }));
   socket.on('kicked', () => send({ type: 'kicked' }));
+  socket.on('room:ended', () => send({ type: 'room-ended' }));
   keeper.start();
 
   return {

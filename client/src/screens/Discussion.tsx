@@ -3,7 +3,8 @@ import { WARMUP_FACTOR } from '@oncealiar/shared';
 import { useGame, usePlayers, useTopic } from '../state/GameProvider';
 import { CountdownRing } from '../components/Countdown';
 import { TopicGrid } from '../components/TopicGrid';
-import { PeekButton, PrivateFile, ReactionBar } from '../components/Dock';
+import { PeekButton, PrivateFile } from '../components/Dock';
+import { ReactionPad, ReactionSplash } from '../components/ReactionSplash';
 import { Sheet } from '../components/Sheet';
 import { ClueList } from './Clues';
 import { Icon } from '../components/Icon';
@@ -60,6 +61,14 @@ export function Discussion() {
         <ClueList />
       </section>
 
+      <section className="discuss__react" aria-labelledby="discuss-react-h">
+        <h2 className="eyebrow" id="discuss-react-h">
+          Stamp a reaction · everyone sees it
+        </h2>
+        <ReactionPad />
+      </section>
+      <ReactionSplash />
+
       <button
         className="btn btn--block discuss__file"
         onClick={() => {
@@ -88,10 +97,6 @@ export function Discussion() {
         </div>
       </Sheet>
 
-      <div className="discuss__react">
-        <span className="eyebrow center">Stamp a reaction</span>
-        <ReactionBar compact />
-      </div>
       {isHost && (
         <button className="btn btn--block discuss__host" onClick={actions.skip}>
           <span className="discuss__host-tag">Host</span>

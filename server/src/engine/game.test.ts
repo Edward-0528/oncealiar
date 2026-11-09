@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { AWAY_GRACE_MS, AWAY_TURN_MS, RUNOFF_MS, SCORE, WARMUP_FACTOR, type GameSettings } from '@oncealiar/shared';
+import { AWAY_GRACE_MS, AWAY_TURN_MS, LOBBY_AWAY_GRACE_MS, LOBBY_REMOVE_MS, MAX_ROUNDS_TARGET, RUNOFF_MS, SCORE, WARMUP_FACTOR, type GameSettings } from '@oncealiar/shared';
 import { Game, GameError, ROLE_REVEAL_MS } from './game.js';
 import { FIXTURE_PACKS, profile, seeded } from '../test/fixtures.js';
 
@@ -335,7 +335,7 @@ describe('two liars', () => {
 
 describe('game flow', () => {
   it('plays all rounds then game-over with winners; restart resets; topics do not repeat', () => {
-    const { g, host } = setup(3, { roundsPerGame: 3 });
+    const { g, host } = setup(3, { targetScore: 0, roundsPerGame: 3 });
     g.start(host, T0);
     const topics = new Set<string>();
     for (let r = 1; r <= 3; r++) {
@@ -389,17 +389,17 @@ describe('host & housekeeping', () => {
     expect(g.get(ids[1])!.presence).toBe('away');
     expect(g.maintenance(T0 + 60_000).changed).toBe(false);
     expect(g.get(ids[1])!.isHost).toBe(true);
-    expect(g.maintenance(T0 + AWAY_GRACE_MS).changed).toBe(true);
+    expect(g.maintenance(T0 + LOBBY_AWAY_GRACE_MS).changed).toBe(true); // lobby: 10 min grace
     expect(g.get(ids[2])!.isHost).toBe(true);
     expect(g.drainToasts()).toContain('P2 is now the host');
   });
 
-  it('removes players offline > 5 min in the lobby only', () => {
+  it('removes players offline > 15 min in the lobby only', () => {
     const { g, ids, host } = setup(5);
     g.setSocket(ids[3], false, T0);
-    expect(g.maintenance(T0 + 4 * 60_000).removed).toEqual([]); // offline since T0+2min
+    expect(g.maintenance(T0 + 12 * 60_000).removed).toEqual([]); // offline since T0+10min
     expect(g.get(ids[3])!.presence).toBe('offline');
-    expect(g.maintenance(T0 + AWAY_GRACE_MS + 5 * 60_000 + 1).removed).toEqual([ids[3]]);
+    expect(g.maintenance(T0 + LOBBY_AWAY_GRACE_MS + LOBBY_REMOVE_MS + 1).removed).toEqual([ids[3]]);
     g.start(host, T0);
     g.goOffline(ids[2], T0);
     expect(g.maintenance(T0 + 60 * 60_000).removed).toEqual([]);
@@ -678,7 +678,7 @@ describe('early lock-in', () => {
 
 describe('warm-up round & awards', () => {
   it('first round of the first game has 1.5× timers; later rounds and games do not', () => {
-    const { g, host } = setup(3, { roundsPerGame: 2 }, { warmup: true });
+    const { g, host } = setup(3, { targetScore: 0, roundsPerGame: 2 }, { warmup: true });
     g.start(host, T0);
     expect(g.publicState(T0).round.warmup).toBe(true);
     for (const p of g.players) g.ready(p.id, T0);
@@ -694,7 +694,7 @@ describe('warm-up round & awards', () => {
   });
 
   it('game-over awards: sharpest eye, smoothest spy, codebreaker', () => {
-    const { g, host } = setup(4, { roundsPerGame: 2 });
+    const { g, host } = setup(4, { targetScore: 0, roundsPerGame: 2 });
     g.start(host, T0);
     // round 1: everyone catches the spy, spy cracks it via lock
     for (const p of g.players) g.ready(p.id, T0);
@@ -785,7 +785,7 @@ describe('briefing (group tutorial)', () => {
   });
 
   it('second game / restart and briefing:false skip it', () => {
-    const { g, host } = brief(3, { roundsPerGame: 1 });
+    const { g, host } = brief(3, { targetScore: 0, roundsPerGame: 1 });
     g.start(host, T0);
     readyAll(g, g.players.map((p) => p.id));
     expect(g.phase).toBe('role-reveal');
@@ -909,7 +909,7 @@ describe('practice round', () => {
   }
 
   it('shows the breakdown but keeps scores at 0; later rounds count; awards ignore it', () => {
-    const { g, host } = setup(4, { roundsPerGame: 2 }, { warmup: true });
+    const { g, host } = setup(4, { targetScore: 0, roundsPerGame: 2 }, { warmup: true });
     g.start(host, T0);
     catchSpy(g, host);
     const r1 = g.publicState(T0).round;

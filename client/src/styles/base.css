@@ -344,6 +344,8 @@ h1, h2, h3, h4, p { margin: 0; }
 [data-theme='midnight'] .btn:not(.btn--primary):not(.btn--gold):not(.btn--success) { --btn-bg: var(--surface-2); }
 .btn--success { --btn-bg: var(--success); --btn-fg: var(--on-success); }
 .btn--secondary { --btn-bg: var(--paper); }
+/* destructive but secondary: red outline + red text on paper (End session) */
+.btn--danger { --btn-bg: var(--paper); --btn-fg: var(--siren); --btn-shadow: var(--siren); border-color: var(--siren); }
 .btn--ghost {
   --btn-bg: transparent;
   --btn-shadow: transparent;

@@ -90,26 +90,31 @@ const LANE_MAX = 4;
  * one full thunk per ~1.2s, then a quieter tap, then silence. Rendered once from TopBar.
  */
 export function ReactionStampLayer() {
-  const { reactions } = useGame();
+  const { reactions, game } = useGame();
   const { byId } = usePlayers();
   const seen = useRef(new Set<string | number>());
+  // during discussion reactions go full screen (ReactionSplash) instead of this lane
+  const splashed = useRef(new Set<string | number>());
+  const discussion = game?.round.phase === 'discussion';
   const throttle = useRef(createStampThrottle());
   useEffect(() => {
     let fresh = false;
     reactions.forEach((r) => {
       if (!seen.current.has(r.id)) {
         seen.current.add(r.id);
-        fresh = true;
+        if (discussion) splashed.current.add(r.id);
+        else fresh = true;
       }
     });
     if (!fresh) return;
     const level = throttle.current(Date.now());
     if (level === 'full') sfx.stamp();
     else if (level === 'soft') sfx.stampSoft();
-  }, [reactions]);
+  }, [reactions, discussion]);
+  const lane = discussion ? [] : reactions.filter((r) => !splashed.current.has(r.id)).slice(-LANE_MAX);
   return (
     <div className="rstamps" aria-hidden="true">
-      {reactions.slice(-LANE_MAX).map((r) => {
+      {lane.map((r) => {
         const p = byId(r.playerId);
         const s = reactionStamp(r.emoji);
         return (

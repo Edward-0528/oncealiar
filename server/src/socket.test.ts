@@ -269,3 +269,91 @@ describe('in-lobby bots', () => {
     guest.close();
   });
 });
+
+describe('host controls', () => {
+  it('hands the host role to another human and ends the session for everyone', async () => {
+    const a = await client();
+    const made = await emitAck<any>((ack) => a.emit('room:create', { name: 'Ana', avatar: 'duck', color: 'coral' }, ack));
+    const b = await client();
+    await emitAck<any>((ack) => b.emit('room:join', made.code, { name: 'Ben', avatar: 'cat', color: 'sky' }, ack));
+    await until(() => (a.state?.players.length ?? 0) === 2);
+    const benId = a.state!.players.find((p) => p.name === 'Ben')!.id;
+
+    // only the host can hand it off
+    expect((await emitAck<any>((ack) => b.emit('player:makeHost', benId, ack))).ok).toBe(false);
+    expect((await emitAck<any>((ack) => a.emit('player:makeHost', benId, ack))).ok).toBe(true);
+    await until(() => !!b.state?.players.find((p) => p.id === benId)?.isHost);
+    expect(b.state!.players.filter((p) => p.isHost)).toHaveLength(1);
+
+    // Ana is no longer host: she can't end it; Ben can
+    expect((await emitAck<any>((ack) => a.emit('room:end', ack))).ok).toBe(false);
+    let endedA = 0;
+    let endedB = 0;
+    a.on('room:ended' as any, () => endedA++);
+    b.on('room:ended' as any, () => endedB++);
+    expect((await emitAck<any>((ack) => b.emit('room:end', ack))).ok).toBe(true);
+    await until(() => endedA === 1 && endedB === 1);
+    const peek = await emitAck<any>((ack) => a.emit('room:peek', made.code, ack));
+    expect(peek.ok).toBe(false);
+    a.close();
+    b.close();
+  });
+});
+
+describe('ending the session', () => {
+  /** host + 2 guests, game started (briefing off), at role-reveal */
+  async function startedRoom() {
+    const [a, b, c] = await Promise.all([client(), client(), client()]);
+    const made = await emitAck<any>((ack) => a.emit('room:create', { name: 'Ana', avatar: 'duck', color: 'coral' }, ack));
+    for (const [x, n] of [[b, 'Ben'], [c, 'Cy']] as const)
+      await emitAck<any>((ack) => x.emit('room:join', made.code, { name: n, avatar: 'cat', color: 'sky' }, ack));
+    await until(() => (a.state?.players.length ?? 0) === 3);
+    expect((await emitAck<any>((ack) => a.emit('settings:update', { briefing: false }, ack))).ok).toBe(true);
+    expect((await emitAck<any>((ack) => a.emit('game:start', ack))).ok).toBe(true);
+    await until(() => [a, b, c].every((x) => x.state?.round.phase === 'role-reveal'));
+    return { a, b, c, code: made.code as string };
+  }
+
+  it('room:end mid-game → final results for everyone; read-only; deleted after the last human leaves', async () => {
+    const { a, b, c, code } = await startedRoom();
+    let ended = 0;
+    for (const x of [a, b, c]) x.on('room:ended' as any, () => ended++);
+    expect((await emitAck<any>((ack) => a.emit('room:end', ack))).ok).toBe(true);
+    await until(() => [a, b, c].every((x) => x.state?.round.phase === 'game-over' && x.state.sessionEnded === true));
+    expect(Array.isArray(b.state!.awards)).toBe(true);
+    expect(b.state!.winners!.length).toBe(3); // unfinished round scored nothing: everyone tied at 0
+    expect(ended).toBe(0);
+
+    for (const ev of ['game:start', 'room:end', 'room:addBot'] as const) {
+      const res = await emitAck<any>((ack) => (a.emit as any)(ev, ack));
+      expect(res).toEqual({ ok: false, error: 'This session has ended' });
+    }
+    expect(await emitAck<any>((ack) => a.emit('settings:update', { roundsPerGame: 3 }, ack))).toEqual({ ok: false, error: 'This session has ended' });
+    const late = await client();
+    expect((await emitAck<any>((ack) => late.emit('room:join', code, { name: 'Late', avatar: 'cat', color: 'sky' }, ack))).ok).toBe(false);
+
+    b.emit('room:leave');
+    c.emit('room:leave');
+    await until(() => a.state!.players.filter((p) => p.connected).length === 1);
+    expect(a.state!.players).toHaveLength(3); // standings stay intact
+    expect(srv.manager.rooms.has(code)).toBe(true);
+    a.emit('room:leave');
+    await until(() => !srv.manager.rooms.has(code));
+    for (const x of [a, b, c, late]) x.close();
+  });
+
+  it('host room:leave mid-game ends the session; a host disconnect does not', async () => {
+    const r1 = await startedRoom();
+    r1.a.disconnect(); // phone locked / network blip
+    await until(() => r1.b.state!.players.find((p) => p.name === 'Ana')!.presence === 'away');
+    await new Promise((r) => setTimeout(r, 50));
+    expect(r1.b.state!.sessionEnded).toBeUndefined();
+    expect(r1.b.state!.round.phase).toBe('role-reveal');
+    for (const x of [r1.b, r1.c]) x.close();
+
+    const r2 = await startedRoom();
+    r2.a.emit('room:leave');
+    await until(() => [r2.b, r2.c].every((x) => x.state?.round.phase === 'game-over' && x.state.sessionEnded === true));
+    for (const x of [r2.a, r2.b, r2.c]) x.close();
+  });
+});

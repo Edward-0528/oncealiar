@@ -27,12 +27,35 @@
  * Practice round (settings.warmupRound): round 1 of the first game gets 1.5×
  * timers and its score breakdown is computed and shown, but the points are not
  * added to scores and the round is not counted in award stats. It still counts
- * toward roundsPerGame.
+ * toward roundsPerGame (and toward the MAX_ROUNDS_TARGET cap).
+ *
+ * Game length: settings.targetScore > 0 → first to N. After each round's scoring,
+ * if the top score is >= targetScore and exactly one player holds it, the game
+ * ends; a tie at the top plays another round (sudden death). MAX_ROUNDS_TARGET
+ * rounds is a hard cap (ties share the win). targetScore 0 → exactly
+ * roundsPerGame rounds. RoundResult.endsGame tells clients which applies.
+ *
+ * Spy selection is a fair rotation: per-player spy counts for the current game
+ * (reset at each new game; joiners start at the current minimum). Spies are
+ * drawn uniformly from the lowest-count dealt players, never repeating last
+ * round's Spy while enough other players are dealt in.
+ *
+ * Session end (endSession): the host ending the session (or leaving mid-game)
+ * jumps everyone to game-over with final standings from the current scores; an
+ * unfinished round's points never count (they're only added in finishRound).
+ * After that `sessionEnded` is set and every gameplay/host action throws.
+ *
+ * Lobby patience: in the lobby an away player goes offline only after
+ * lobbyAwayGraceMs (default LOBBY_AWAY_GRACE_MS, 10 min) instead of awayGraceMs.
  */
 import {
   AWAY_GRACE_MS,
   AWAY_TURN_MS,
   DEFAULT_SETTINGS,
+  LOBBY_AWAY_GRACE_MS,
+  LOBBY_REMOVE_MS,
+  MAX_ROUNDS_TARGET,
+  TARGET_SCORES,
   RUNOFF_MS,
   SCORE,
   TWO_SPIES_MIN,
@@ -98,6 +121,8 @@ export interface GameOptions {
   settings?: Partial<GameSettings>;
   /** away → offline after this long (default AWAY_GRACE_MS) */
   awayGraceMs?: number;
+  /** away → offline while in the lobby (default LOBBY_AWAY_GRACE_MS) */
+  lobbyAwayGraceMs?: number;
   /** max clue turn for a player who is away when the turn starts (default AWAY_TURN_MS) */
   awayTurnMs?: number;
 }
@@ -141,7 +166,17 @@ export class Game {
   /** games started in this room (warm-up applies to the first) */
   gamesStarted = 0;
   awards: Award[] | undefined;
+  /** host ended the session: read-only game-over (see endSession) */
+  sessionEnded = false;
+  /** when the session was ended (epoch ms) */
+  sessionEndedAt: number | null = null;
   private stats = new Map<PlayerID, GameStats>();
+  /** fair Spy rotation: times each player has been Spy this game */
+  spyCounts = new Map<PlayerID, number>();
+  /** Spies of the previous dealt round (not repeated back-to-back) */
+  lastSpyIds: PlayerID[] = [];
+  /** lastSpyIds before the current deal (restored if the round is aborted) */
+  private prevLastSpyIds: PlayerID[] = [];
   /** clue turn bookkeeping for away players */
   private turnStartedAt = 0;
   private turnShortened = false;
@@ -152,10 +187,12 @@ export class Game {
   private readonly rng: () => number;
   private readonly idGen: () => string;
   readonly awayGraceMs: number;
+  readonly lobbyAwayGraceMs: number;
   readonly awayTurnMs: number;
 
   constructor(opts: GameOptions) {
     this.awayGraceMs = opts.awayGraceMs ?? AWAY_GRACE_MS;
+    this.lobbyAwayGraceMs = opts.lobbyAwayGraceMs ?? LOBBY_AWAY_GRACE_MS;
     this.awayTurnMs = opts.awayTurnMs ?? AWAY_TURN_MS;
     this.code = opts.code;
     this.packs = opts.packs;
@@ -184,6 +221,7 @@ export class Game {
   }
 
   addPlayer(profile: PlayerProfile, token: string, now: number): InternalPlayer {
+    this.assertLive();
     if (this.players.length >= this.settings.maxPlayers) throw new GameError('Room is full');
     const p: InternalPlayer = {
       ...profile,
@@ -202,6 +240,11 @@ export class Game {
       inRound: false
     };
     this.players.push(p);
+    // joiners start at the current minimum spy count, so they aren't forced to be Spy next
+    if (this.spyCounts.size > 0) {
+      const counts = this.players.filter((x) => this.spyCounts.has(x.id)).map((x) => this.spyCounts.get(x.id)!);
+      this.spyCounts.set(p.id, counts.length ? Math.min(...counts) : 0);
+    }
     void now;
     return p;
   }
@@ -230,6 +273,7 @@ export class Game {
   }
 
   updateProfile(id: PlayerID, profile: PlayerProfile): void {
+    this.assertLive();
     const p = this.mustGet(id);
     p.name = this.uniqueName(profile.name, id);
     p.avatar = profile.avatar;
@@ -324,12 +368,17 @@ export class Game {
     this.checkAutoAdvance(now);
   }
 
+  /** away → offline grace for the current phase (longer in the lobby: screens time out at parties) */
+  private get graceMs(): number {
+    return this.phase === 'lobby' ? Math.max(this.awayGraceMs, this.lobbyAwayGraceMs) : this.awayGraceMs;
+  }
+
   /** away players past the grace period go offline. Returns true if anyone changed. */
   private expireAway(now: number): boolean {
     let changed = false;
     for (const p of [...this.players]) {
-      if (p.presence === 'away' && p.awaySince !== null && now - p.awaySince >= this.awayGraceMs && this.get(p.id)) {
-        const expiredAt = p.awaySince + this.awayGraceMs;
+      if (p.presence === 'away' && p.awaySince !== null && now - p.awaySince >= this.graceMs && this.get(p.id)) {
+        const expiredAt = p.awaySince + this.graceMs;
         this.markOffline(p, now);
         if (!p.connected) p.disconnectedAt = expiredAt; // (not re-dealt/removed meanwhile)
         changed = true;
@@ -343,7 +392,7 @@ export class Game {
     let t = this.phaseEndsAt;
     for (const p of this.players) {
       if (p.presence === 'away' && p.awaySince !== null) {
-        const at = p.awaySince + this.awayGraceMs;
+        const at = p.awaySince + this.graceMs;
         if (t === null || at < t) t = at;
       }
     }
@@ -388,10 +437,24 @@ export class Game {
   }
 
   kick(byId: PlayerID, targetId: PlayerID, now: number): void {
+    this.assertLive();
     this.requireHost(byId);
     if (byId === targetId) throw new GameError("You can't kick yourself");
     if (!this.get(targetId)) throw new GameError('No such player');
     this.removePlayer(targetId, now);
+  }
+
+  /** host hands the role to another connected human */
+  transferHost(byId: PlayerID, targetId: PlayerID): void {
+    this.assertLive();
+    this.requireHost(byId);
+    const t = this.get(targetId);
+    if (!t) throw new GameError('No such player');
+    if (t.isBot) throw new GameError("A bot can't be the host");
+    if (!t.connected) throw new GameError(`${t.name} isn't connected`);
+    if (t.id === byId) return;
+    this.setHost(t.id);
+    this.toasts.push(`${t.name} is now the host`);
   }
 
   setHost(id: PlayerID): void {
@@ -415,7 +478,7 @@ export class Game {
    *    (host migration never happens while the host is merely away)
    *  - in lobby, players offline > lobbyRemoveMs are removed
    */
-  maintenance(now: number, hostGraceMs = 0, lobbyRemoveMs = 5 * 60_000): { changed: boolean; removed: PlayerID[] } {
+  maintenance(now: number, hostGraceMs = 0, lobbyRemoveMs = LOBBY_REMOVE_MS): { changed: boolean; removed: PlayerID[] } {
     let changed = this.expireAway(now);
     const removed: PlayerID[] = [];
     if (this.phase === 'lobby') {
@@ -455,6 +518,7 @@ export class Game {
   }
 
   updateSettings(byId: PlayerID, patch: Partial<GameSettings>): void {
+    this.assertLive();
     this.requireHost(byId);
     if (this.phase !== 'lobby') throw new GameError('Settings can only change in the lobby');
     if (!patch || typeof patch !== 'object') throw new GameError('Invalid settings');
@@ -486,6 +550,11 @@ export class Game {
     if (patch.votingSeconds !== undefined) s.votingSeconds = int(patch.votingSeconds, 10, 180, 'votingSeconds');
     if (patch.guessSeconds !== undefined) s.guessSeconds = int(patch.guessSeconds, 10, 120, 'guessSeconds');
     if (patch.roundsPerGame !== undefined) s.roundsPerGame = int(patch.roundsPerGame, 1, 20, 'roundsPerGame');
+    if (patch.targetScore !== undefined) {
+      if (patch.targetScore !== 0 && !(TARGET_SCORES as readonly unknown[]).includes(patch.targetScore))
+        throw new GameError('Invalid targetScore');
+      s.targetScore = patch.targetScore;
+    }
     if (patch.liarSeesTopic !== undefined) s.liarSeesTopic = bool(patch.liarSeesTopic, 'liarSeesTopic');
     if (patch.familyFriendly !== undefined) s.familyFriendly = bool(patch.familyFriendly, 'familyFriendly');
     if (patch.warmupRound !== undefined) s.warmupRound = bool(patch.warmupRound, 'warmupRound');
@@ -526,6 +595,7 @@ export class Game {
   // ───────────────────────── round flow ─────────────────────────
 
   start(byId: PlayerID, now: number): void {
+    this.assertLive();
     this.requireHost(byId);
     if (this.phase !== 'lobby') throw new GameError('Game already started');
     const connected = this.players.filter((p) => p.connected).length;
@@ -535,6 +605,7 @@ export class Game {
     this.winners = undefined;
     this.awards = undefined;
     this.stats.clear();
+    this.resetSpyRotation();
     if (this.settings.briefing && this.gamesStarted === 0) {
       // first game in this room: group tutorial first (untimed, everyone confirms)
       this.toLobby();
@@ -557,6 +628,7 @@ export class Game {
 
   /** briefing: "I get it". Idempotent; ignored outside the briefing. */
   briefingReady(id: PlayerID, now: number): void {
+    this.assertLive();
     const p = this.mustGet(id);
     if (this.phase !== 'briefing') return;
     p.ready = true;
@@ -583,7 +655,7 @@ export class Game {
   /** true during the warm-up round: round 1 of the first game in this room */
   get warmup(): boolean {
     // a one-round game never becomes all-practice (everyone would tie at 0)
-    return this.settings.warmupRound && this.settings.roundsPerGame > 1 && this.gamesStarted === 1 && this.roundNumber === 1 && this.phase !== 'lobby';
+    return this.settings.warmupRound && (this.settings.targetScore > 0 || this.settings.roundsPerGame > 1) && this.gamesStarted === 1 && this.roundNumber === 1 && this.phase !== 'lobby';
   }
 
   /** seconds → ms, stretched during the warm-up round */
@@ -603,13 +675,52 @@ export class Game {
       p.ready = false;
     }
     const liarCount = this.settings.liarCount === 2 && dealt.length >= TWO_SPIES_MIN ? 2 : 1;
-    this.liarIds = this.shuffle(dealt.map((p) => p.id)).slice(0, liarCount);
+    this.liarIds = this.pickSpies(dealt.map((p) => p.id), liarCount);
     this.turnOrder = this.shuffle(dealt.map((p) => p.id));
     this.currentTurn = 0;
     this.clues = [];
     this.resetVoting();
     this.roundNumber++;
     this.setPhase('role-reveal', now + ROLE_REVEAL_MS);
+  }
+
+  private resetSpyRotation(): void {
+    this.spyCounts.clear();
+    this.lastSpyIds = [];
+    this.prevLastSpyIds = [];
+  }
+
+  /**
+   * Fair rotation: draw uniformly (this.rng) among dealt players with the lowest
+   * spy count this game, excluding last round's Spies when that still leaves
+   * enough candidates (always true with >= 3 dealt and 1 Spy).
+   */
+  private pickSpies(dealt: PlayerID[], liarCount: number): PlayerID[] {
+    const known = dealt.filter((id) => this.spyCounts.has(id)).map((id) => this.spyCounts.get(id)!);
+    const min = known.length ? Math.min(...known) : 0;
+    for (const id of dealt) if (!this.spyCounts.has(id)) this.spyCounts.set(id, min);
+    const picked: PlayerID[] = [];
+    const fresh = dealt.filter((id) => !this.lastSpyIds.includes(id));
+    const pool = dealt.length >= 3 && fresh.length >= liarCount ? fresh : dealt;
+    for (let k = 0; k < liarCount; k++) {
+      const left = pool.filter((id) => !picked.includes(id));
+      const low = Math.min(...left.map((id) => this.spyCounts.get(id)!));
+      const lowest = left.filter((id) => this.spyCounts.get(id) === low);
+      picked.push(lowest[Math.floor(this.rng() * lowest.length)]);
+    }
+    for (const id of picked) this.spyCounts.set(id, this.spyCounts.get(id)! + 1);
+    this.prevLastSpyIds = this.lastSpyIds;
+    this.lastSpyIds = [...picked];
+    return picked;
+  }
+
+  /** undo the current deal's spy bookkeeping (round aborted before it was played) */
+  private undoSpyPick(): void {
+    for (const id of this.liarIds) {
+      const c = this.spyCounts.get(id);
+      if (c !== undefined) this.spyCounts.set(id, Math.max(0, c - 1));
+    }
+    this.lastSpyIds = this.prevLastSpyIds;
   }
 
   private pickTopic(): Topic | null {
@@ -631,6 +742,7 @@ export class Game {
 
   private abortRound(now: number, reason: string): void {
     this.toasts.push(reason);
+    this.undoSpyPick();
     const connected = this.players.filter((p) => p.connected).length;
     if (connected >= Math.max(3, this.settings.minPlayers)) {
       this.roundNumber--;
@@ -670,6 +782,7 @@ export class Game {
   }
 
   ready(id: PlayerID, now: number): void {
+    this.assertLive();
     const p = this.mustGet(id);
     if (this.phase !== 'role-reveal' || !p.inRound) return;
     p.ready = true;
@@ -677,6 +790,7 @@ export class Game {
   }
 
   submitClue(id: PlayerID, text: unknown, now: number): void {
+    this.assertLive();
     if (this.phase !== 'clues') throw new GameError('Not the clue phase');
     if (this.settings.clueMode !== 'typed') throw new GameError('Clues are spoken this game');
     if (this.turnOrder[this.currentTurn] !== id) throw new GameError("It's not your turn");
@@ -690,6 +804,7 @@ export class Game {
   }
 
   clueDone(id: PlayerID, now: number): void {
+    this.assertLive();
     if (this.phase !== 'clues') throw new GameError('Not the clue phase');
     if (this.settings.clueMode !== 'spoken') throw new GameError('Type your clue instead');
     const current = this.turnOrder[this.currentTurn];
@@ -700,6 +815,7 @@ export class Game {
   }
 
   castVote(id: PlayerID, targetId: unknown, now: number): void {
+    this.assertLive();
     if (this.phase !== 'voting') throw new GameError('Not voting right now');
     const p = this.mustGet(id);
     if (!p.inRound) throw new GameError("You're not in this round");
@@ -717,6 +833,7 @@ export class Game {
    * (once per round); during liar-guess it is the final guess.
    */
   submitGuess(id: PlayerID, word: unknown, now: number): void {
+    this.assertLive();
     const early = this.phase === 'clues' || this.phase === 'discussion' || this.phase === 'voting';
     if (this.phase !== 'liar-guess' && !early) throw new GameError('Not guessing right now');
     if (!this.liarIds.includes(id)) throw new GameError('Only the Spy can guess');
@@ -739,6 +856,7 @@ export class Game {
   }
 
   skipPhase(byId: PlayerID, now: number): void {
+    this.assertLive();
     this.requireHost(byId);
     switch (this.phase) {
       case 'briefing':
@@ -758,9 +876,10 @@ export class Game {
   }
 
   nextRound(byId: PlayerID, now: number): void {
+    this.assertLive();
     this.requireHost(byId);
     if (this.phase !== 'results') throw new GameError('Round not finished');
-    if (this.roundNumber >= this.settings.roundsPerGame) {
+    if (this.gameEnds()) {
       const max = Math.max(...this.players.map((p) => p.score));
       this.winners = this.players.filter((p) => p.score === max).map((p) => p.id);
       this.awards = this.computeAwards();
@@ -770,7 +889,57 @@ export class Game {
     this.startRound(now);
   }
 
+  /**
+   * Host ends the session. Returns false when nothing has been played yet in this
+   * game (lobby with no rounds, or the pre-game briefing): the caller should close
+   * the room as before. Otherwise moves to game-over with winners/awards from the
+   * current scores (an unfinished round scores nothing) and marks the session ended.
+   */
+  endSession(now: number): boolean {
+    void now;
+    if (this.sessionEnded) return true;
+    if ((this.phase === 'lobby' && this.roundNumber === 0) || this.phase === 'briefing') return false;
+    if (this.phase !== 'game-over') {
+      if (this.phase !== 'results') {
+        // abort the round in progress: no result, nobody's points change
+        this.resetVoting();
+      }
+      this.liarIds = [];
+      this.turnOrder = [];
+      this.clues = [];
+      this.topic = null;
+      this.secretWord = null;
+      for (const p of this.players) p.ready = false;
+      const max = this.players.length ? Math.max(...this.players.map((p) => p.score)) : 0;
+      this.winners = this.players.filter((p) => p.score === max).map((p) => p.id);
+      this.awards = this.computeAwards();
+      this.setPhase('game-over', null);
+    }
+    this.sessionEnded = true;
+    this.sessionEndedAt = now;
+    return true;
+  }
+
+  private assertLive(): void {
+    if (this.sessionEnded) throw new GameError('This session has ended');
+  }
+
+  /**
+   * Does the round just finished end the game? targetScore 0: after roundsPerGame
+   * rounds. Otherwise: a single leader at >= targetScore (a tie at the top plays on),
+   * or MAX_ROUNDS_TARGET rounds played.
+   */
+  gameEnds(): boolean {
+    const target = this.settings.targetScore;
+    if (!target) return this.roundNumber >= this.settings.roundsPerGame;
+    if (this.roundNumber >= MAX_ROUNDS_TARGET) return true;
+    if (this.players.length === 0) return false;
+    const max = Math.max(...this.players.map((p) => p.score));
+    return max >= target && this.players.filter((p) => p.score === max).length === 1;
+  }
+
   restart(byId: PlayerID): void {
+    this.assertLive();
     this.requireHost(byId);
     if (this.phase !== 'game-over') throw new GameError('Game is not over');
     for (const p of this.players) p.score = 0;
@@ -778,6 +947,7 @@ export class Game {
     this.winners = undefined;
     this.awards = undefined;
     this.stats.clear();
+    this.resetSpyRotation();
     this.toLobby();
   }
 
@@ -961,8 +1131,10 @@ export class Game {
       ...(this.runoff ? { runoff: [...this.runoff], runoffVotes: toRecord(this.votes) } : {}),
       ...(liarCaught ? { guessLocked } : {}),
       ...(this.locks.size ? { lockedGuesses } : {}),
-      scoreBreakdown: lines
+      scoreBreakdown: lines,
+      endsGame: false
     };
+    this.result.endsGame = this.gameEnds();
     this.setPhase('results', null);
   }
 
@@ -1095,7 +1267,8 @@ export class Game {
         turnOrder: [...this.turnOrder],
         currentTurn: this.currentTurn,
         clues: this.clues.map((c) => ({ ...c })),
-        result: showResult ? this.result : null,
+        // endsGame is computed live so it always matches what nextRound will do
+        result: showResult && this.result ? { ...this.result, endsGame: this.phase === 'game-over' || this.gameEnds() } : null,
         runoff: this.phase === 'voting' && this.runoff ? [...this.runoff] : null,
         warmup: this.warmup,
         practice: this.warmup
@@ -1104,6 +1277,7 @@ export class Game {
       premium: this.premium
     };
     if (this.winners) state.winners = [...this.winners];
+    if (this.sessionEnded) state.sessionEnded = true;
     if (this.awards && this.phase === 'game-over') state.awards = this.awards.map((a) => ({ ...a, playerIds: [...a.playerIds] }));
     return state;
   }

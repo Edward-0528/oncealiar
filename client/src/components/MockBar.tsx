@@ -2,7 +2,7 @@ import React from 'react';
 import { useGame } from '../state/GameProvider';
 import './MockBar.css';
 
-const PHASES = ['home', 'profile', 'lobby', 'briefing', 'role-reveal', 'clues', 'discussion', 'voting', 'liar-guess', 'results', 'game-over'];
+const PHASES = ['home', 'profile', 'lobby', 'briefing', 'role-reveal', 'clues', 'discussion', 'voting', 'liar-guess', 'results', 'game-over', 'session-ended'];
 
 /** Dev-only controls shown in ?mock= mode. Changes reload with new params. */
 export function MockBar() {

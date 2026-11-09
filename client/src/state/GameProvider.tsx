@@ -59,6 +59,8 @@ export interface GameStore {
     updateSettings: (patch: Partial<GameSettings>) => void;
     kick: (id: PlayerID) => void;
     addBot: () => void;
+    makeHost: (id: PlayerID) => void;
+    endSession: () => void;
     start: () => void;
     ready: () => void;
     /** briefing tutorial: "I'm ready" (sets your Player.ready; the game starts once everyone is) */
@@ -202,6 +204,13 @@ export function GameProvider({ transport, children }: { transport: Transport; ch
           resetLocal();
           toast('The host removed you from the room', 'error');
           break;
+        case 'room-ended': {
+          const wasHost = !!gameRef.current?.players.find((p) => p.id === youRef.current?.playerId)?.isHost;
+          if (gameRef.current) forgetRoom(gameRef.current.code);
+          resetLocal();
+          toast(wasHost ? 'Session ended for everyone' : 'The host ended the game');
+          break;
+        }
         case 'session-invalid': {
           const hadGame = !!gameRef.current;
           forgetRoom(e.code);
@@ -330,6 +339,14 @@ export function GameProvider({ transport, children }: { transport: Transport; ch
           if (!res.ok) toast(res.error, 'error');
         }),
       kick: (id) => t.emit('player:kick', id),
+      makeHost: (id) =>
+        t.emit('player:makeHost', id, (res) => {
+          if (!res.ok) toast(res.error, 'error');
+        }),
+      endSession: () =>
+        t.emit('room:end', (res) => {
+          if (!res.ok) toast(res.error, 'error');
+        }),
       addBot: () =>
         t.emit('room:addBot', (res) => {
           if (!res.ok) toast(res.error, 'error');

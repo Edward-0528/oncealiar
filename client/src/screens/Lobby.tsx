@@ -5,6 +5,7 @@ import { useGame, usePlayers } from '../state/GameProvider';
 import { PlayerTile } from '../components/PlayerTile';
 import { Icon } from '../components/Icon';
 import { Sheet } from '../components/Sheet';
+import { EndSessionSheet } from '../components/EndSessionSheet';
 import { ProfileEditor } from '../components/ProfileEditor';
 import { SettingsSheet } from './SettingsSheet';
 import { copyText, inviteUrl, shareOrCopy, tvUrl } from '../lib/share';
@@ -14,6 +15,7 @@ import { Masthead } from '../components/Paper';
 import { staggerDelay } from '../lib/motion';
 import { BRIEFING_SECONDS } from '../components/demo/GameDemo';
 import { hasRoomPlayed } from '../lib/roomHistory';
+import { targetOf } from '../lib/gameEnd';
 import './Lobby.css';
 
 export function Lobby() {
@@ -22,6 +24,7 @@ export function Lobby() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [qrBig, setQrBig] = useState(false);
   const [kickTarget, setKickTarget] = useState<Player | null>(null);
+  const [confirmEnd, setConfirmEnd] = useState(false);
   const [editMe, setEditMe] = useState(false);
   const [draft, setDraft] = useState(profile);
   const count = useRef(players.length);
@@ -148,7 +151,15 @@ export function Lobby() {
         </div>
         <ul className="lobby__facts">
           <li>
-            <b>{s.roundsPerGame}</b> rounds
+            {targetOf(s) > 0 ? (
+              <>
+                First to <b>{targetOf(s)}</b> points
+              </>
+            ) : (
+              <>
+                <b>{s.roundsPerGame}</b> rounds
+              </>
+            )}
           </li>
           <li>{s.clueMode === 'spoken' ? 'Clues out loud' : 'Typed clues'}</li>
           <li>
@@ -187,12 +198,20 @@ export function Lobby() {
             <p className="center lobby__hint">
               {need > 0 ? 'Share the code. Everyone joins on their own phone.' : players.length < 5 ? 'Tip: 5–8 players is the sweet spot.' : 'Looking good. Phones out, poker faces on.'}
             </p>
+            <button className="btn btn--danger btn--sm lobby__end" onClick={() => setConfirmEnd(true)}>
+              End session
+            </button>
           </>
         ) : (
-          <div className="waitbar">
-            <span className="waitbar__dot" aria-hidden="true" />
-            Waiting for the host to start…
-          </div>
+          <>
+            <div className="waitbar">
+              <span className="waitbar__dot" aria-hidden="true" />
+              Waiting for the host to start…
+            </div>
+            <button className="btn btn--secondary btn--sm lobby__end" onClick={() => actions.leave()}>
+              Leave room
+            </button>
+          </>
         )}
       </div>
 
@@ -210,7 +229,7 @@ export function Lobby() {
       <Sheet
         open={!!kickTarget}
         onClose={() => setKickTarget(null)}
-        title={`Remove ${kickTarget?.name ?? ''}?`}
+        title={kickTarget?.name ?? ''}
         variant="modal"
         footer={
           <>
@@ -218,7 +237,7 @@ export function Lobby() {
               Cancel
             </button>
             <button
-              className="btn btn--primary btn--sm"
+              className="btn btn--danger btn--sm"
               onClick={() => {
                 if (kickTarget) actions.kick(kickTarget.id);
                 setKickTarget(null);
@@ -229,8 +248,32 @@ export function Lobby() {
           </>
         }
       >
-        <p className="dim">They’ll be sent back to the home screen.</p>
+        {kickTarget && !kickTarget.isBot && kickTarget.connected ? (
+          <div className="stack">
+            <button
+              className="btn btn--gold btn--block"
+              onClick={() => {
+                actions.makeHost(kickTarget.id);
+                setKickTarget(null);
+              }}
+            >
+              Make {kickTarget.name} the host
+            </button>
+            <p className="dim">The host starts games and changes settings. Removing someone sends them back to the home screen.</p>
+          </div>
+        ) : (
+          <p className="dim">{kickTarget?.isBot ? 'Remove this bot from the room.' : 'They’ll be sent back to the home screen.'}</p>
+        )}
       </Sheet>
+
+      <EndSessionSheet
+        open={confirmEnd}
+        onClose={() => setConfirmEnd(false)}
+        onConfirm={() => {
+          setConfirmEnd(false);
+          actions.endSession();
+        }}
+      />
 
       <Sheet open={editMe} onClose={() => setEditMe(false)} title="Edit your look">
         <ProfileEditor

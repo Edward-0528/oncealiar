@@ -7,6 +7,7 @@ export type TransportEvent =
   | { type: 'reaction'; reaction: Reaction }
   | { type: 'toast'; message: string }
   | { type: 'kicked' }
+  | { type: 'room-ended' }
   | { type: 'conn'; status: ConnStatus }
   /** live only: the stored session could not be resumed (room gone / token expired) */
   | { type: 'session-invalid'; code: string; error: string }
@@ -26,7 +27,7 @@ export interface RoomPeek {
   /** premium rooms allow premium characters */
   premium?: boolean;
   players: Pick<Player, 'id' | 'name' | 'avatar' | 'color' | 'isHost' | 'score' | 'connected' | 'presence'>[];
-  settings?: Pick<GameSettings, 'roundsPerGame' | 'clueMode'>;
+  settings?: Pick<GameSettings, 'roundsPerGame' | 'clueMode'> & { targetScore?: number };
 }
 
 /** Abstracts socket.io so the UI can run against a fake server (mock mode). */

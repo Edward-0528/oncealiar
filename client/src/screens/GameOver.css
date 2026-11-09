@@ -2,41 +2,17 @@
 .gameover__headline { font-size: var(--fs-d1); line-height: 0.92; animation: stamp-slam 0.55s var(--slam) both 0.2s; --stamp-rot: 0deg; overflow-wrap: anywhere; }
 .gameover__dek { font-size: var(--fs-body); border-bottom: 2px solid var(--ink); padding-bottom: 10px; }
 
-.podium { display: grid; grid-template-columns: 1fr 1.15fr 1fr; align-items: end; gap: 10px; padding-top: 34px; }
-.podium__col { display: flex; flex-direction: column; align-items: center; gap: 6px; position: relative; min-width: 0; }
-.podium__photo { width: 86%; color: #111; animation: pop-in var(--dur-slow) var(--pop) both; }
-.podium__col--1 .podium__photo { animation-delay: 1.2s; transform: rotate(-2deg); }
-.podium__col--2 .podium__photo { animation-delay: 0.8s; transform: rotate(2deg); }
-.podium__col--3 .podium__photo { animation-delay: 0.4s; transform: rotate(-2deg); }
-.podium__crown { position: absolute; top: -26px; z-index: 3; font-size: var(--fs-d4); }
-.podium__name { font-size: var(--fs-body); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.podium__block {
-  width: 100%;
-  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+/* the final race board is the hero: one big E2 sheet that fills the phone */
+.gameover__race {
+  position: relative;
+  padding: 26px 16px 20px;
   background: var(--paper);
   border: var(--border-w) solid var(--border-color);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  padding-top: 10px;
-  gap: 2px;
-  transform-origin: bottom;
-  animation: grow var(--dur-slow) var(--ease-out) both;
-  box-shadow: var(--e1);
+  box-shadow: var(--e2);
+  border-radius: var(--radius);
+  rotate: calc(var(--tilt) * -1);
 }
-@keyframes grow { from { transform: scaleY(0); } to { transform: none; } }
-.podium__col--1 .podium__block { height: 150px; background: var(--ink); color: var(--news); animation-delay: 0.9s; }
-.podium__col--2 .podium__block { height: 110px; background: var(--manila); animation-delay: 0.5s; }
-.podium__col--3 .podium__block { height: 80px; animation-delay: 0.1s; }
-[data-theme='midnight'] .podium__col--1 .podium__block { background: var(--highlight); color: var(--on-highlight); }
-.podium__place { font-size: var(--fs-d2); }
-.podium__pts { font-family: var(--font-type); font-size: var(--fs-meta); }
-
-.gameover__rest { list-style: none; margin: 0; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; background: var(--paper); border: var(--e0-border) solid var(--border-color); box-shadow: var(--e0); border-radius: var(--radius); }
-.gameover__rest li { display: flex; align-items: center; gap: 10px; min-height: 36px; border-bottom: 1px dashed var(--line); }
-.gameover__rest li:last-child { border-bottom: 0; }
-.gameover__rest b { font-size: var(--fs-d4); font-weight: 400; }
+[data-theme='midnight'] .gameover__race { border: 0; background: var(--surface); }
 
 .share-card {
   position: relative;
@@ -47,8 +23,7 @@
   border-radius: var(--radius);
   background: var(--paper-2);
   border: var(--border-w) dashed var(--border-color);
-  box-shadow: var(--e2); /* hero */
-  transform: rotate(calc(var(--tilt) * -1));
+  box-shadow: var(--e1);
 }
 .share-card__head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: var(--fs-d4); border-bottom: 3px solid var(--ink); padding-bottom: 4px; }
 .share-card__head .type { font-size: var(--fs-meta); }
@@ -57,3 +32,20 @@
 [data-theme='midnight'] .share-card__mug { border: 0; background: none; }
 .gameover__awards { display: flex; flex-direction: column; gap: 12px; }
 .gameover__awards-h { border-bottom: 3px solid var(--ink); padding-bottom: 4px; }
+
+/* host ended the session: a red "stop the presses" bulletin above the headline */
+.gameover__ended {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px;
+  background: var(--btn-red);
+  color: #fff;
+  border: var(--border-w) solid var(--ink);
+  box-shadow: var(--e1);
+  animation: stamp-slam 0.48s var(--slam) both 0.1s;
+  --stamp-rot: -1deg;
+}
+.gameover__ended-kicker { font-family: var(--font-display); font-size: var(--fs-d3); line-height: 1; text-transform: uppercase; letter-spacing: 0.02em; }
+.gameover__ended-txt { font-family: var(--font-type); font-size: var(--fs-meta); line-height: 1.35; }
+@media (prefers-reduced-motion: reduce) { .gameover__ended { animation: fade-in var(--dur-fast) ease both; } }

@@ -5,14 +5,16 @@ import { Confetti } from '../components/Confetti';
 import { Icon } from '../components/Icon';
 import { shareOrCopy } from '../lib/share';
 import { CoachTip } from '../components/coach/CoachTip';
-import { Masthead, Stamp } from '../components/Paper';
+import { Masthead } from '../components/Paper';
+import { RaceBoard } from '../components/RaceBoard';
+import { targetOf } from '../lib/gameEnd';
 import { AwardsList } from '../components/mechanics';
 import { sfx } from '../lib/sound';
 import { haptic } from '../lib/haptics';
 import './GameOver.css';
 
-/** podium reactions land on the WINNER stamp's impact frame (slam at 1500ms + ~260ms) */
-const PODIUM_BEAT_MS = 1760;
+/** the race bars start after the headline slam lands */
+const RACE_START_MS = 700;
 
 export function GameOver() {
   const { game, you, actions, toast } = useGame();
@@ -38,8 +40,8 @@ export function GameOver() {
   const ranked = [...players].sort((a, b) => b.score - a.score);
   const winnerIds = game.winners?.length ? game.winners : ranked[0] ? [ranked[0].id] : [];
   const winners = players.filter((p) => winnerIds.includes(p.id));
-  const top3 = ranked.slice(0, 3);
-  const podium = [top3[1], top3[0], top3[2]];
+  const target = targetOf(game.settings);
+  const ended = !!game.sessionEnded;
   const me = players.find((p) => p.id === you.playerId);
   const myRank = ranked.findIndex((p) => p.id === you.playerId) + 1;
   const iWon = winnerIds.includes(you.playerId);
@@ -57,37 +59,27 @@ export function GameOver() {
   return (
     <main className="screen screen--wide gameover">
       <Confetti count={80} />
-      <Masthead left={`Game over · ${date}`} right="Final edition" title="The Daily Fib" />
-      <CoachTip phase="game-over" role={you.role} />
+      <Masthead left={`${ended ? 'Session ended' : 'Game over'} · ${date}`} right="Final edition" title="The Daily Fib" />
+      {ended ? (
+        <div className="gameover__ended" role="status">
+          <span className="gameover__ended-kicker">Stop the presses</span>
+          <span className="gameover__ended-txt">The host ended the session. These are the final scores.</span>
+        </div>
+      ) : (
+        <CoachTip phase="game-over" role={you.role} />
+      )}
       <h1 className="display gameover__headline">{winners.length > 1 ? 'Dead heat at the top!' : `${winners[0]?.name ?? 'Someone'} wins it all!`}</h1>
-      <p className="type gameover__dek">Sources confirm: {players.length} suspects, {game.settings.roundsPerGame} rounds, zero trust left.</p>
+      <p className="type gameover__dek">
+        {ended
+          ? `Session ended in round ${game.round.number}. ${players.length} suspects, zero trust left.`
+          : `Sources confirm: ${players.length} suspects, ${game.round.number} rounds${target > 0 ? `, first to ${target}` : ''}, zero trust left.`}
+      </p>
 
-      <section className="podium" aria-label="Podium">
-        {podium.map((p, i) => {
-          const place = [2, 1, 3][i];
-          return p ? (
-            <div key={p.id} className={`podium__col podium__col--${place}`}>
-              {winnerIds.includes(p.id) && (
-                <Stamp tone="solid" rot={-8} slam delay={1500} className="podium__crown">
-                  Winner
-                </Stamp>
-              )}
-              <span className="podium__photo polaroid">
-                <span className="pin pin--red" aria-hidden="true" />
-                <span className="polaroid__photo">
-                  <Avatar avatar={p.avatar} color={p.color} size={place === 1 ? 88 : 66} label={p.name} className="podium__av" mood={winnerIds.includes(p.id) ? 'win' : 'idle'} beat={{ id: winnerIds.includes(p.id) ? 'gloat' : 'slump', key: 'final', delay: PODIUM_BEAT_MS }} />
-                </span>
-              </span>
-              <b className="podium__name">{p.name}</b>
-              <div className="podium__block">
-                <span className="display podium__place">{place}</span>
-                <span className="podium__pts">{p.score} pts</span>
-              </div>
-            </div>
-          ) : (
-            <div key={`empty-${i}`} />
-          );
-        })}
+      <section className="gameover__race" aria-labelledby="race-h">
+        <h2 className="sr-only" id="race-h">
+          Final standings
+        </h2>
+        <RaceBoard hero target={target} rounds={game.round.number} afterLabel={ended ? `Final · round ${game.round.number}` : undefined} youId={you.playerId} winnerIds={winnerIds} delay={RACE_START_MS} rows={ranked.map((p) => ({ player: p, score: p.score }))} />
       </section>
 
       {!!game.awards?.length && (
@@ -97,19 +89,6 @@ export function GameOver() {
           </h2>
           <AwardsList awards={game.awards} players={players} />
         </section>
-      )}
-
-      {ranked.length > 3 && (
-        <ol className="gameover__rest" start={4}>
-          {ranked.slice(3).map((p, i) => (
-            <li key={p.id}>
-              <span className="type">#{i + 4}</span>
-              <Avatar avatar={p.avatar} color={p.color} size={30} label="" />
-              <span className="spacer">{p.name}</span>
-              <b className="display">{p.score}</b>
-            </li>
-          ))}
-        </ol>
       )}
 
       <section className="share-card" aria-label="Your result">
@@ -134,7 +113,14 @@ export function GameOver() {
         </button>
       </section>
 
-      <div className="stack">
+      {ended ? (
+        <div className="stack gameover__cta">
+          <button className="btn btn--primary btn--lg btn--block" onClick={actions.leave}>
+            <Icon name="door" /> Back to home
+          </button>
+        </div>
+      ) : (
+      <div className="stack gameover__cta">
         {isHost ? (
           <button className="btn btn--primary btn--lg btn--block" onClick={actions.restart}>
             Play again
@@ -149,6 +135,7 @@ export function GameOver() {
           <Icon name="door" size={18} /> Leave
         </button>
       </div>
+      )}
     </main>
   );
 }
