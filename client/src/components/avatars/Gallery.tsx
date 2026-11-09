@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ALL_AVATARS, AVATAR_INFO, PLAYER_COLORS, type AvatarId, type AvatarPack } from '@oncealiar/shared';
 import { Avatar } from '../Avatar';
 import { MOODS, type Mood } from './kit';
+import { BEAT_IDS, useBeat } from './beats';
 
 /**
  * Dev-only character sheet: every character x every mood, colour tints and
@@ -53,6 +54,7 @@ export function CharacterGallery() {
   const [sticker, setSticker] = useState(false);
   const [focus, setFocus] = useState<AvatarId>('chancla');
   const [focusMood, setFocusMood] = useState<Mood>('idle');
+  const [beat, fireBeat] = useBeat();
 
   return (
     <div style={css.page}>
@@ -85,11 +87,18 @@ export function CharacterGallery() {
 
         {/* hero: big view + size ladder + colour row */}
         <section style={{ ...css.card, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 20 }}>
-          <Avatar avatar={focus} color={color} size={240} mood={focusMood} animated={animated} masked={masked} sticker={sticker} />
+          <Avatar avatar={focus} color={color} size={240} mood={focusMood} animated={animated} beat={beat} masked={masked} sticker={sticker} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: '1 1 280px', minWidth: 0 }}>
             <span style={css.tag}>{AVATAR_INFO[focus].premium ? 'PREMIUM' : 'COVER STAR'}</span>
             <h2 style={{ ...css.head, fontSize: 40 }}>{AVATAR_INFO[focus].name}</h2>
             <p style={{ margin: 0, fontFamily: "'Special Elite', 'Courier New', monospace" }}>{AVATAR_INFO[focus].line}</p>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }} aria-label="Beats">
+              {BEAT_IDS.map((b) => (
+                <button key={b} type="button" onClick={() => fireBeat(b)} style={{ border: '2px dashed #111', background: beat?.id === b ? '#FFE14D' : '#FFFDF5', color: '#111', padding: '4px 10px', fontWeight: 700 }}>
+                  {b}
+                </button>
+              ))}
+            </div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {MOODS.map((m) => (
                 <button key={m} type="button" onClick={() => setFocusMood(m)} style={{ border: '2px solid #111', background: m === focusMood ? '#111' : '#FFFDF5', color: m === focusMood ? '#FFFDF5' : '#111', padding: '4px 10px', fontWeight: 700 }}>
@@ -139,7 +148,7 @@ export function CharacterGallery() {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4, background: '#F1E3C2', border: '2px solid #111', padding: 4 }}>
                     {MOODS.map((m) => (
                       <div key={m} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', fontSize: 10, fontWeight: 700, textTransform: 'uppercase' }}>
-                        <Avatar avatar={a} color={color} size="100%" mood={m} animated={animated && m === 'idle'} masked={masked} sticker={sticker} label={`${AVATAR_INFO[a].name}, ${m}`} />
+                        <Avatar avatar={a} color={color} size="100%" mood={m} masked={masked} sticker={sticker} label={`${AVATAR_INFO[a].name}, ${m}`} />
                         {MOOD_LABEL[m]}
                       </div>
                     ))}

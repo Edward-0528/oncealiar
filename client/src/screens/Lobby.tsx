@@ -11,6 +11,7 @@ import { copyText, inviteUrl, shareOrCopy, tvUrl } from '../lib/share';
 import { sfx } from '../lib/sound';
 import { CoachTip } from '../components/coach/CoachTip';
 import { Masthead } from '../components/Paper';
+import { staggerDelay } from '../lib/motion';
 import './Lobby.css';
 
 export function Lobby() {
@@ -22,6 +23,8 @@ export function Lobby() {
   const [editMe, setEditMe] = useState(false);
   const [draft, setDraft] = useState(profile);
   const count = useRef(players.length);
+  // players already here when the lobby opened don't drop in; later joiners do
+  const present = useRef(new Set(players.map((p) => p.id)));
 
   useEffect(() => {
     if (players.length > count.current) sfx.join();
@@ -58,7 +61,7 @@ export function Lobby() {
         </span>
         <div className="lobby__code display" aria-label={`Room code ${game.code.split('').join(' ')}`}>
           {game.code.split('').map((c, i) => (
-            <span key={i} style={{ animationDelay: `${i * 90}ms`, ['--r' as string]: `${[-3, 2, -1.5, 3][i % 4]}deg` }}>
+            <span key={i} style={{ animationDelay: `${i * 90}ms` }}>
               {c}
             </span>
           ))}
@@ -100,7 +103,8 @@ export function Lobby() {
               isYou={p.id === you.playerId}
               animated
               alias={AVATAR_INFO[p.avatar as AvatarId]?.name}
-              style={{ animationDelay: `${Math.min(i, 8) * 60}ms` }}
+              beat={present.current.has(p.id) ? undefined : { id: 'drop', key: p.id }}
+              style={{ animationDelay: `calc(${staggerDelay(i)}ms * var(--delay-scale, 1))` }}
               onClick={
                 p.id === you.playerId
                   ? () => {

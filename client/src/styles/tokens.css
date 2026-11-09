@@ -22,8 +22,9 @@
   --stamp-blue: #2f7de1;
   --stamp-blue-ink: #1f5fb0; /* blue for small text: 4.9:1 on white */
   --hl: #8fe36b;            /* highlighter green */
-  --paper: #ffffff;
-  --paper-2: #f7f3e6;       /* off-white photo paper */
+  --paper: #fbf7ec;         /* rest surface for cards/panels (no more yellow-on-yellow) */
+  --paper-2: #f4eedb;       /* off-white photo paper */
+  --paper-white: #ffffff;   /* QR codes / photo whites only */
   --cork: #c79a5b;
 
   /* Surfaces */
@@ -57,10 +58,13 @@
   --on-success: #ffffff;
   --focus: var(--stamp-blue);
 
-  /* Background art: halftone dots on newsprint */
-  --halftone: radial-gradient(rgba(17, 17, 17, 0.13) 1.2px, transparent 1.45px) 0 0 / 9px 9px;
+  /* Background art: halftone dots on newsprint. Quiet on the page (fine, low
+     contrast), crisp and coarse on big ink fills (--halftone-ink). */
+  --halftone: radial-gradient(rgba(17, 17, 17, 0.075) 1.1px, transparent 1.5px) 0 0 / 10px 10px;
+  --halftone-ink: radial-gradient(rgba(255, 225, 77, 0.1) 1.8px, transparent 2.2px) 0 0 / 14px 14px;
   --bg-art: var(--halftone), linear-gradient(180deg, #ffe45a, #ffdc3d);
-  --grain-opacity: 0.05;
+  --grain-opacity: 0.03;
+  --tint: rgba(17, 17, 17, 0.06); /* coach / tip panels: flat ink-6% wash */
   --vignette: none;
 
   /* Card back (dossier cover) */
@@ -78,12 +82,33 @@
   --border-w: 3px;
   --border-color: var(--ink);
 
-  /* Depth: hard offset shadows */
-  --shadow-sm: 3px 3px 0 var(--ink);
-  --shadow-card: 6px 6px 0 var(--ink);
-  --shadow-pop: 8px 8px 0 var(--ink);
-  --btn-depth: 6px;
-  --tilt: 1deg; /* multiply for slight card rotations; 0 in calmer themes */
+  /* Elevation — exactly three levels.
+     E0 flat: lists, tips, grid cells (thin border, no shadow)
+     E1: cards, inputs, secondary buttons
+     E2: the ONE hero card + the primary CTA per screen */
+  --e0: none;
+  --e1: 4px 4px 0 var(--ink);
+  --e2: 8px 8px 0 var(--ink);
+  --e-press: 1px 1px 0 var(--ink);
+  --e0-border: 2px;
+  /* legacy aliases → the three levels */
+  --shadow-sm: var(--e1);
+  --shadow-card: var(--e1);
+  --shadow-pop: var(--e2);
+  --btn-depth: 4px;        /* E1 */
+  --btn-depth-hero: 8px;   /* E2 (primary CTA) */
+  --tilt: 1deg; /* the single hero artefact per screen leans −1 × this; 0 in calmer themes */
+
+  /* Type scale */
+  --fs-d1: clamp(56px, 16vw, 88px); /* reveals / headlines only */
+  --fs-d2: 40px;                     /* phase titles */
+  --fs-d3: 28px;                     /* section heads, big stamps */
+  --fs-d4: 20px;                     /* buttons, card titles */
+  --fs-body: 17px;
+  --fs-meta: 14px;                   /* minimum for anything a player must read */
+  --fs-eyebrow: 12px;                /* 700 / 0.14em / uppercase only */
+  --fs-type: 16px;                   /* Special Elite "typed" artefacts (14–16px band) */
+  --eyebrow-tracking: 0.14em;
 
   /* Type */
   --font-display: 'Anton', Impact, 'Arial Narrow', sans-serif;
@@ -113,10 +138,27 @@
   --pc-rose: #ff7eb6;
   --pc-slate: #a3b1c6;
 
-  /* Motion */
-  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --slam: cubic-bezier(0.2, 1.4, 0.4, 1);
+  /* Motion — "Ink & Impact": still by default, nothing moves without a cause.
+     Durations */
+  --dur-press: 90ms;
+  --dur-fast: 160ms;
+  --dur-base: 240ms;
+  --dur-slow: 380ms;
+  --dur-scene: 520ms;
+  /* Easings */
+  --ease-out: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-in: cubic-bezier(0.55, 0, 0.75, 0.2);
+  --ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
+  --pop: cubic-bezier(0.3, 1.25, 0.6, 1);
+  --slam: cubic-bezier(0.2, 1.4, 0.4, 1); /* stamps only */
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* legacy: small chips/badges only */
+  /* Distances */
+  --dist-1: 4px;
+  --dist-2: 12px;
+  --dist-3: 32px;
+  /* Sequencing */
+  --stagger: 40ms;
+  --delay-scale: 1; /* 0.5 under prefers-reduced-motion (see base.css) */
 }
 
 /* ---------- Midnight Masquerade (alternate / premium cosmetic) ---------- */
@@ -177,10 +219,18 @@
   --radius-lg: 28px;
   --border-w: 0px;
   --border-color: transparent;
-  --shadow-sm: 0 6px 14px -6px rgba(0, 0, 0, 0.6);
+  --e1: 0 6px 14px -6px rgba(0, 0, 0, 0.6);
+  --e2: 0 24px 60px -20px rgba(0, 0, 0, 0.8);
+  --e-press: none;
+  --e0-border: 0px;
+  --shadow-sm: var(--e1);
   --shadow-card: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 18px 40px -18px rgba(0, 0, 0, 0.7);
-  --shadow-pop: 0 24px 60px -20px rgba(0, 0, 0, 0.8);
+  --shadow-pop: var(--e2);
   --btn-depth: 5px;
+  --btn-depth-hero: 5px;
+  --halftone-ink: radial-gradient(transparent, transparent);
+  --tint: rgba(255, 255, 255, 0.06);
+  --paper-white: #ffffff;
   --tilt: 0deg;
   --font-display: 'Bricolage Grotesque', 'Inter', system-ui, sans-serif;
   --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -251,10 +301,18 @@
   --radius-lg: 32px;
   --border-w: 0px;
   --border-color: transparent;
-  --shadow-sm: 0 6px 12px -6px rgba(84, 52, 38, 0.35);
+  --e1: 0 6px 12px -6px rgba(84, 52, 38, 0.35);
+  --e2: 0 24px 50px -20px rgba(84, 52, 38, 0.45);
+  --e-press: none;
+  --e0-border: 0px;
+  --shadow-sm: var(--e1);
   --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 14px 30px -16px rgba(84, 52, 38, 0.35);
-  --shadow-pop: 0 24px 50px -20px rgba(84, 52, 38, 0.45);
+  --shadow-pop: var(--e2);
   --btn-depth: 5px;
+  --btn-depth-hero: 5px;
+  --halftone-ink: radial-gradient(transparent, transparent);
+  --tint: rgba(84, 52, 38, 0.07);
+  --paper-white: #ffffff;
   --tilt: 0.3deg;
   --font-display: 'Bricolage Grotesque', 'Inter', system-ui, sans-serif;
   --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;

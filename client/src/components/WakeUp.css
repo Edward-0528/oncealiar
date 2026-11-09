@@ -6,16 +6,16 @@
 .wake-quiet { min-height: 60vh; }
 
 .wake { gap: 16px; padding-top: calc(14px + env(safe-area-inset-top)); animation: fade-in 0.35s ease both; }
-.wake__masthead .masthead__title { font-size: clamp(38px, 12.5vw, 60px); letter-spacing: 0.01em; }
+.wake__masthead .masthead__title { font-size: var(--fs-d2); letter-spacing: 0.01em; }
 .wake__lead { display: flex; flex-direction: column; gap: 6px; }
 .wake__lead .h3 { line-height: 1.05; }
-.wake__explain { margin: 0; font-size: 16px; line-height: 1.45; color: var(--text-dim); }
+.wake__explain { margin: 0; font-size: var(--fs-body); line-height: 1.45; color: var(--text-dim); }
 
 /* progress card */
 .wake__progress { position: relative; display: flex; flex-direction: column; gap: 10px; overflow: visible; }
 .wake__progress-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-.wake__clock { font-size: 22px; line-height: 1; font-variant-numeric: tabular-nums; }
-.wake__status { margin: 0; min-height: 2.6em; font-size: 15px; line-height: 1.3; }
+.wake__clock { font-size: var(--fs-d4); line-height: 1; font-variant-numeric: tabular-nums; }
+.wake__status { margin: 0; min-height: 2.6em; font-size: var(--fs-type); line-height: 1.3; }
 
 .wake__bar {
   position: relative;
@@ -41,7 +41,7 @@
 @keyframes wake-stripes { to { background-position: 22.6px 0, 0 0; } }
 
 .wake__slow { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; }
-.wake__slow-note { font-size: 13px; }
+.wake__slow-note { font-size: var(--fs-meta); }
 
 .wake__stamp {
   --stamp-rot: -9deg;
@@ -56,9 +56,9 @@
   z-index: 2;
 }
 .wake--ready .wake__clock { visibility: hidden; }
-.wake__stamp small { font-family: var(--font-type); font-size: 13px; letter-spacing: 0.04em; text-transform: none; }
+.wake__stamp small { font-family: var(--font-type); font-size: var(--fs-meta); letter-spacing: 0.04em; text-transform: none; }
 
-.wake__invite { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 15px; background: var(--paper-2); }
+.wake__invite { display: flex; align-items: center; gap: 8px; margin: 0; font-size: var(--fs-meta); background: var(--paper-2); }
 .wake__invite svg { flex-shrink: 0; color: var(--success); }
 
 /* rotating cameo */
@@ -66,17 +66,17 @@
 .wake__tip-tag { position: absolute; top: -12px; left: 14px; }
 .wake__tip-body { display: flex; align-items: center; gap: 14px; animation: rise-in 0.45s var(--ease-out) both; }
 .wake__tip-body .av { flex-shrink: 0; }
-.wake__tip-body p { margin: 0; font-size: 15px; line-height: 1.4; }
+.wake__tip-body p { margin: 0; font-size: var(--fs-body); line-height: 1.4; }
 
 .wake__actions { margin-top: 2px; }
-.wake__me { gap: 10px; font-size: 18px; }
+.wake__me { gap: 10px; font-size: var(--fs-d4); }
 
 .wake--ready .wake__actions,
 .wake--ready .wake__tip { opacity: 0.55; transition: opacity 0.3s ease; }
 
 @media (min-width: 900px) {
   .wake { max-width: 640px; }
-  .wake__explain { font-size: 18px; }
+  .wake__explain { font-size: var(--fs-body); }
 }
 
 /* ---------- compact banner (server dozed off while on Home / lobby) ---------- */
@@ -104,12 +104,12 @@
   color: var(--text);
   border: var(--border-w, 3px) solid var(--ink, var(--line-strong));
   border-radius: var(--radius);
-  box-shadow: 4px 4px 0 var(--accent);
+  box-shadow: var(--e1);
 }
 .wake-banner__row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-.wake-banner__title { font-size: 20px; line-height: 1; }
-.wake-banner .wake__clock { font-size: 16px; }
-.wake-banner__text { margin: 0; font-size: 14px; line-height: 1.35; }
+.wake-banner__title { font-size: var(--fs-d4); line-height: 1; }
+.wake-banner .wake__clock { font-size: var(--fs-type); }
+.wake-banner__text { margin: 0; font-size: var(--fs-meta); line-height: 1.35; }
 .wake-banner__retry { align-self: flex-start; margin-top: 4px; }
 
 @media (prefers-reduced-motion: reduce) {

@@ -3,15 +3,14 @@ import { useGame, usePlayers } from '../state/GameProvider';
 import { TimerPill } from '../components/Countdown';
 import { GameDock, PrivateFile, ReactionBar } from '../components/Dock';
 import { RunoffBanner, isVoteTarget } from '../components/mechanics';
+import { staggerDelay } from '../lib/motion';
 import { Avatar } from '../components/Avatar';
 import { Icon } from '../components/Icon';
 import { Stamp } from '../components/Paper';
 import { CoachTip } from '../components/coach/CoachTip';
-import { buzz } from '../lib/haptics';
+import { haptic } from '../lib/haptics';
 import { sfx } from '../lib/sound';
 import './Phases.css';
-
-const ROTS = [-3, 2, -1, 3, -2, 1, -3, 2, 0, -2, 3, -1];
 
 export function Voting() {
   const { game, you, actions } = useGame();
@@ -62,25 +61,25 @@ export function Voting() {
               <button
                 key={p.id}
                 className={`suspect polaroid ${picked ? 'is-picked' : ''} ${self ? 'is-self' : ''} ${out ? 'is-out' : ''}`}
-                style={{ ['--r' as string]: `${ROTS[i % ROTS.length]}deg`, animationDelay: `${i * 50}ms` }}
+                style={{ animationDelay: `${staggerDelay(i)}ms` }}
                 disabled={!target}
                 aria-pressed={picked}
                 aria-label={self ? `${p.name} (you can't vote for yourself)` : out ? `${p.name} (not in the re-vote)` : `Accuse ${p.name}${picked ? ' (your vote)' : ''}${p.hasVoted ? ', has voted' : ''}`}
                 onClick={() => {
                   if (!target || picked) return;
                   sfx.stamp();
-                  buzz(25);
+                  haptic('thud');
                   actions.vote(p.id);
                 }}
               >
                 <span className={`pin ${picked ? 'pin--red' : ''}`} aria-hidden="true" />
                 <span className="polaroid__photo">
-                  <Avatar avatar={p.avatar} color={p.color} size="82%" label="" mood={picked ? 'sus' : 'idle'} />
+                  <Avatar avatar={p.avatar} color={p.color} size="82%" label="" mood={picked ? 'sus' : 'idle'} beat={picked ? { id: 'flinch', key: p.id } : undefined} />
                 </span>
                 <span className="suspect__name">{self ? 'You' : p.name}</span>
                 <span className={`suspect__status ${p.hasVoted ? 'is-voted' : ''}`}>{p.hasVoted ? '✓ Voted' : 'Deciding'}</span>
                 {picked && (
-                  <Stamp rot={-12} slam className="suspect__stamp">
+                  <Stamp rot={-10} slam className="suspect__stamp">
                     Suspect
                   </Stamp>
                 )}

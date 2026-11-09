@@ -25,16 +25,21 @@ export interface AvatarArtProps {
   sticker?: boolean;
   /** standalone file: add xmlns */
   standalone?: boolean;
+  /**
+   * One-shot beat layer (in-game only). `key` remounts the layer so the CSS
+   * animation restarts; className picks the animation (see avatars.css).
+   */
+  beatLayer?: { key: string; className?: string; style?: React.CSSProperties };
 }
 
-export function AvatarArt({ avatar, c, uid: rawUid, mood = 'idle', size = 56, masked, maskClassName, className, label, sticker, standalone }: AvatarArtProps) {
+export function AvatarArt({ avatar, c, uid: rawUid, mood = 'idle', size = 56, masked, maskClassName, className, label, sticker, standalone, beatLayer }: AvatarArtProps) {
   const uid = rawUid.replace(/[^a-zA-Z0-9_-]/g, '') || 'a';
   const id = isAvatarId(avatar) ? avatar : 'chancla';
   const art = CHARACTER_ART[id];
   const m = art.mask;
   const k = 1.2 * (m.s ?? 1);
   const sw = (w: number) => w / k;
-  const body = (
+  const figure = (
     <g className={`av-anim av-anim--${art.anim}`}>
       {art.draw({ c, mood, uid })}
       {masked && (
@@ -50,6 +55,13 @@ export function AvatarArt({ avatar, c, uid: rawUid, mood = 'idle', size = 56, ma
         </g>
       )}
     </g>
+  );
+  const body = beatLayer ? (
+    <g key={beatLayer.key} className={beatLayer.className ? `av-beat-layer ${beatLayer.className}` : 'av-beat-layer'} style={beatLayer.style}>
+      {figure}
+    </g>
+  ) : (
+    figure
   );
   return (
     <svg

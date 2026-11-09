@@ -1,5 +1,5 @@
 .premium { display: flex; flex-direction: column; gap: 14px; }
-.premium__art { display: flex; justify-content: center; gap: 10px; font-size: 38px; padding: 10px 0 4px; }
+.premium__art { display: flex; justify-content: center; gap: 10px; font-size: var(--fs-d2); padding: 10px 0 4px; }
 .premium__art span {
   width: 72px;
   height: 90px;
@@ -10,9 +10,9 @@
   border: var(--border-w) solid var(--border-color);
   box-shadow: var(--shadow-sm);
 }
-.premium__art span:nth-child(1) { transform: rotate(-9deg); }
-.premium__art span:nth-child(2) { transform: translateY(-8px); background: var(--manila); }
-.premium__art span:nth-child(3) { transform: rotate(9deg); }
+.premium__art span:nth-child(1) { transform: translateY(4px); }
+.premium__art span:nth-child(2) { transform: translateY(-8px) rotate(calc(var(--tilt) * -1)); background: var(--manila); box-shadow: var(--e2); }
+.premium__art span:nth-child(3) { transform: translateY(4px); }
 .premium__kicker { align-self: center; }
 .premium__code { padding-top: 14px; border-top: 3px dashed var(--ink); }
 .premium__code .input { flex: 1; min-width: 0; letter-spacing: 0.08em; }

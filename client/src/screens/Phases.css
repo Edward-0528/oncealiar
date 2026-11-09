@@ -2,21 +2,16 @@
 .masthead__row .timer-pill { flex-shrink: 0; margin-bottom: 4px; }
 .masthead__row .masthead__title { min-width: 0; }
 
-/* Discussion */
-.discuss__lede, .voting__lede { font-size: 16px; }
-.discuss__cols { display: grid; gap: 18px; }
-.discuss__intel { background: var(--manila); }
-.discuss__log { transform: rotate(calc(var(--tilt) * 0.5)); }
-@media (min-width: 900px) { .discuss__cols { grid-template-columns: 1.4fr 1fr; align-items: start; } }
-.discuss__react { display: flex; flex-direction: column; gap: 10px; }
+/* Discussion rules live in Discussion.css */
+.voting__lede { font-size: var(--fs-type); }
 
 /* Voting: evidence board */
 .board {
   position: relative;
   padding: 20px 12px 18px;
   background-color: var(--cork);
-  background-image: radial-gradient(rgba(0, 0, 0, 0.13) 1px, transparent 1.5px);
-  background-size: 6px 6px;
+  background-image: radial-gradient(rgba(0, 0, 0, 0.1) 1.4px, transparent 1.9px);
+  background-size: 10px 10px;
   border: var(--border-w) solid var(--border-color);
   border-radius: var(--radius);
   box-shadow: var(--shadow-card);
@@ -26,7 +21,7 @@
 [data-theme='midnight'] .board__string path { stroke: var(--accent); opacity: 0.6; }
 @keyframes string-draw { from { stroke-dashoffset: 600; } to { stroke-dashoffset: 0; } }
 .board__grid { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px 14px; }
-.board__hub { position: absolute; left: 50%; top: 50%; width: 34px; height: 34px; margin: -17px 0 0 -17px; display: grid; place-items: center; border-radius: 50%; background: var(--siren); color: #fff; border: 3px solid var(--ink); font-family: var(--font-display); font-size: 20px; z-index: 0; box-shadow: 2px 2px 0 var(--ink); }
+.board__hub { position: absolute; left: 50%; top: 50%; width: 34px; height: 34px; margin: -17px 0 0 -17px; display: grid; place-items: center; border-radius: 50%; background: var(--siren); color: #fff; border: 3px solid var(--ink); font-family: var(--font-display); font-size: var(--fs-d4); z-index: 0; }
 .suspect {
   border: 0;
   font: inherit;
@@ -35,41 +30,40 @@
   flex-direction: column;
   align-items: stretch;
   text-align: center;
-  rotate: var(--r, 0deg);
-  animation: paper-in 0.45s var(--ease-out) both;
-  transition: transform 0.18s var(--spring), rotate 0.18s var(--spring), box-shadow 0.18s;
+  animation: enter var(--dur-base) var(--ease-out) both;
+  transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast);
   min-height: 44px;
 }
-.suspect:hover:not(:disabled) { rotate: 0deg; transform: translateY(-3px) scale(1.03); }
-.suspect:active:not(:disabled) { rotate: calc(var(--r, 0deg) * -1); transform: scale(0.95); }
-.suspect.is-picked { box-shadow: 0 0 0 3px var(--siren), 3px 5px 0 rgba(0, 0, 0, 0.45); rotate: 0deg; transform: scale(1.04); z-index: 1; }
+.suspect:hover:not(:disabled) { transform: translate(-1px, -1px); }
+.suspect:active:not(:disabled) { transform: translate(3px, 3px); box-shadow: var(--e-press); }
+.suspect.is-picked { box-shadow: 0 0 0 3px var(--siren), var(--e2); transform: translate(-2px, -2px); z-index: 1; }
 .suspect.is-self { opacity: 0.75; cursor: default; }
 .suspect.is-self .polaroid__photo { filter: grayscale(0.6); }
-.suspect__name { font-family: var(--font-type); font-size: 14px; padding-top: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #111; }
-.suspect__status { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #4a4536; }
+.suspect__name { font-family: var(--font-type); font-size: var(--fs-meta); padding-top: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #111; }
+.suspect__status { font-size: var(--fs-meta); font-weight: 700; line-height: 1.2; color: #4a4536; }
 .suspect__status.is-voted { color: var(--success); }
 [data-theme='midnight'] .suspect__name { color: var(--text); }
-.suspect__stamp { position: absolute; top: 36%; left: -6px; right: -6px; text-align: center; font-size: 19px; padding: 0 2px; border-width: 3px; }
-.voting__note { font-size: 14px; }
-@media (min-width: 700px) { .board__grid { gap: 26px 22px; } .suspect__name { font-size: 17px; } }
+.suspect__stamp { position: absolute; top: 36%; left: -6px; right: -6px; text-align: center; font-size: var(--fs-d4); padding: 0 2px; border-width: 3px; }
+.voting__note { font-size: var(--fs-meta); }
+@media (min-width: 700px) { .board__grid { gap: 26px 22px; } .suspect__name { font-size: var(--fs-body); } }
 
 /* Liar guess */
 .guess { gap: 16px; }
 .guess__suspect .folder__body, .guess__file-body { display: flex; flex-direction: column; gap: 10px; }
 .guess__file-body { flex-direction: row; align-items: center; gap: 12px; padding-right: 20px; }
-.guess__file-body p { font-size: 15px; }
-.guess__stamp { position: absolute; top: -18px; right: 10px; font-size: 20px; z-index: 2; }
+.guess__file-body p { font-size: var(--fs-meta); }
+.guess__stamp { position: absolute; top: -18px; right: 10px; font-size: var(--fs-d4); z-index: 2; }
 .guess__mug { flex-shrink: 0; width: 66px; height: 66px; display: grid; place-items: center; background: var(--paper); border: var(--border-w) solid var(--ink); }
-.guess__lede { font-size: 15px; padding-right: 40px; }
-.guess__typed { min-height: 2.1em; }
-.guess__mutter { font-size: 17px; min-height: 1.5em; color: var(--siren-ink); }
-.typewriter { font-family: var(--font-type); text-transform: none; letter-spacing: 0; }
-.guess__typed .typewriter { font-size: clamp(26px, 8vw, 36px); }
-.typewriter__caret { display: inline-block; width: 0.5em; height: 1em; margin-left: 2px; vertical-align: -0.12em; background: currentColor; animation: caret 0.8s steps(1) infinite; }
+.guess__lede { font-size: var(--fs-meta); padding-right: 40px; }
 .guess--wait .tgrid { opacity: 0.95; }
+.guess__waiting { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding-top: 4px; }
+.guess__waiting-h { margin: 0; }
+.guess__waiting-sub { margin: 0; font-size: var(--fs-body); color: var(--text-dim); }
+.guess__pulse { width: 12px; height: 12px; border-radius: 50%; background: var(--siren); animation: fade-in var(--dur-slow) var(--ease-out) both; }
+@media (prefers-reduced-motion: reduce) { .guess__pulse { animation: none; } }
 .guess__locked { background: var(--manila); }
-.guess__q { font-size: 16px; }
-.guess__q b { font-size: 22px; }
+.guess__q { font-size: var(--fs-body); }
+.guess__q b { font-size: var(--fs-d4); }
 .guess__confirm {
   position: sticky;
   bottom: calc(12px + env(safe-area-inset-bottom));
@@ -83,7 +77,26 @@
   border-radius: var(--radius);
   background: var(--paper);
   border: var(--border-w) solid var(--border-color);
-  box-shadow: var(--shadow-pop);
+  box-shadow: var(--e1);
 }
-.guess__confirm.is-on { background: var(--manila); animation: paper-in 0.35s var(--ease-out); }
+.guess__confirm.is-on { background: var(--manila); animation: enter var(--dur-base) var(--ease-out); }
 .suspect.is-out { opacity: 0.45; filter: grayscale(0.9); cursor: not-allowed; }
+
+/* Spy-only private surfaces (the Spy's own phone, after they are caught): the file inverts */
+.spy-face {
+  --spy-ink: #121010;
+}
+.spy-face .folder__body, .card.spy-face {
+  background:
+    radial-gradient(60% 45% at 50% 30%, rgba(218, 42, 34, 0.28), transparent 70%),
+    var(--halftone-ink),
+    var(--spy-ink);
+  color: var(--news);
+  box-shadow: var(--e2);
+}
+.folder.spy-face::before { background: var(--siren); }
+.spy-face .guess__mug { background: #1f1b1a; border-color: var(--news); }
+.spy-face .guess__stamp { background: transparent; }
+.card.spy-face .eyebrow { color: var(--news); opacity: 0.72; }
+.card.spy-face .hl { color: var(--ink); }
+[data-theme='midnight'] .spy-face .folder__body, [data-theme='midnight'] .card.spy-face { border: 2px solid var(--accent); }

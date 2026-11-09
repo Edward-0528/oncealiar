@@ -3,7 +3,7 @@ import type { Phase, PrivateView, PublicGameState } from '@oncealiar/shared';
 import { useGame } from './GameProvider';
 import { usePageVisible } from './hooks';
 import { sfx } from '../lib/sound';
-import { buzz } from '../lib/haptics';
+import { haptic } from '../lib/haptics';
 import { clearNotifications, flagTitle, notify, restoreTitle } from '../lib/attention';
 
 export interface Attention {
@@ -72,7 +72,7 @@ function useAttentionCues(attention: Attention | null) {
       void notify(a.title, a.body);
     } else if (a.kind !== 'turn') {
       // (the Clues screen already buzzes for your turn)
-      buzz([40, 30, 40]);
+      haptic('heartbeat');
     }
   }, [key]);
 
@@ -84,7 +84,7 @@ function useAttentionCues(attention: Attention | null) {
     pending.current = null;
     const a = current.current;
     if (p && a && p.key === a.key) {
-      buzz([60, 40, 60]);
+      haptic('heartbeat');
       if (a.kind === 'turn') sfx.yourTurn();
       else sfx.vote();
     }

@@ -4,7 +4,9 @@ import { useGame, useTopic } from '../state/GameProvider';
 import { Icon } from './Icon';
 import { Sheet } from './Sheet';
 import { TopicGrid } from './TopicGrid';
-import { buzz } from '../lib/haptics';
+import { haptic } from '../lib/haptics';
+import { useCountdown } from '../state/hooks';
+import { deriveDockStatus } from '../lib/dockStatus';
 import { reactionStamp } from './Paper';
 import { SpyLockIn } from './mechanics';
 import './Dock.css';
@@ -19,10 +21,9 @@ export function ReactionBar({ compact }: { compact?: boolean }) {
           <button
             key={e}
             className={`rbar__btn rbar__btn--${s.tone}`}
-            style={{ ['--r' as string]: `${s.rot / 2}deg` }}
             onClick={() => {
               actions.react(e);
-              buzz(12);
+              haptic('tick');
             }}
             aria-label={`Stamp ${s.label} (${s.name})`}
           >
@@ -74,7 +75,7 @@ export function PeekButton({ block }: { block?: boolean }) {
   const start = (e: React.SyntheticEvent) => {
     e.preventDefault();
     setOn(true);
-    buzz(15);
+    haptic('thud');
   };
   const end = () => setOn(false);
   return (
@@ -117,7 +118,30 @@ export function GridSheetButton() {
   );
 }
 
-/** Persistent bottom dock during a round: grid, peek, reactions. */
+/**
+ * One-line status: "YOU: <what to do>" or "WAITING ON: <names> (0:12)".
+ * Same wording for every role; renders nothing when the state is unclear.
+ */
+export function DockStatusLine() {
+  const { game, you } = useGame();
+  const ms = useCountdown(game?.round.phaseEndsAt);
+  const st = deriveDockStatus(game, you, ms);
+  if (!st) return null;
+  return (
+    <div className={`dock__status dock__status--${st.kind}`}>
+      <span className="dock__status-text" role="status">
+        <b>{st.kind === 'you' ? 'You:' : 'Waiting on:'}</b> {st.text}
+      </span>
+      {st.time && (
+        <span className="dock__status-time" aria-hidden="true">
+          {st.time}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/** Persistent bottom dock during a round: status line, then grid, peek, reactions. */
 export function GameDock({ showReactions = true }: { showReactions?: boolean }) {
   const [react, setReact] = useState(false);
   return (
@@ -128,14 +152,17 @@ export function GameDock({ showReactions = true }: { showReactions?: boolean }) 
         </div>
       )}
       <div className="dock__bar">
-        <GridSheetButton />
-        <PeekButton />
-        {showReactions && (
-          <button className={`dock__btn ${react ? 'is-on' : ''}`} onClick={() => setReact((r) => !r)} aria-expanded={react} aria-label="Reaction stamps">
-            <Icon name="smile" />
-            <span>Stamp</span>
-          </button>
-        )}
+        <DockStatusLine />
+        <div className="dock__row">
+          <GridSheetButton />
+          <PeekButton />
+          {showReactions && (
+            <button className={`dock__btn ${react ? 'is-on' : ''}`} onClick={() => setReact((r) => !r)} aria-expanded={react} aria-label="Reaction stamps">
+              <Icon name="smile" />
+              <span>Stamp</span>
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

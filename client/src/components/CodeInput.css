@@ -12,11 +12,11 @@
   color: var(--text);
   font-family: var(--font-display);
   font-weight: var(--display-weight, 800);
-  font-size: clamp(30px, 9vw, 44px);
+  font-size: var(--fs-d2);
   text-transform: uppercase;
   caret-color: var(--accent);
-  box-shadow: var(--shadow-sm, none);
-  transition: border-color 0.15s, transform 0.2s var(--spring), box-shadow 0.15s, background 0.15s;
+  box-shadow: var(--e1, none);
+  transition: border-color 0.15s, transform var(--dur-fast) var(--ease-out), box-shadow 0.15s, background 0.15s;
 }
 .code-input__box.is-filled { background: var(--surface-2); transform: translate(-1px, -2px); }
 .code-input__box:focus-visible { outline: none; border-color: var(--focus); box-shadow: 0 0 0 4px var(--accent-soft), var(--shadow-sm, none); }
@@ -27,7 +27,7 @@
   min-height: 1.3em;
   margin: 0;
   font-family: var(--font-type, var(--font-ui));
-  font-size: 14px;
+  font-size: var(--fs-meta);
   color: var(--siren-ink, var(--accent-text, var(--accent)));
   opacity: 0;
   transition: opacity 0.2s;

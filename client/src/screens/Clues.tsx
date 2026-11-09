@@ -4,7 +4,7 @@ import { Avatar } from '../components/Avatar';
 import { CountdownRing } from '../components/Countdown';
 import { GameDock, PrivateFile } from '../components/Dock';
 import { Icon } from '../components/Icon';
-import { buzz } from '../lib/haptics';
+import { haptic } from '../lib/haptics';
 import { sfx } from '../lib/sound';
 import { colorVar } from '../lib/profile';
 import { CoachTip } from '../components/coach/CoachTip';
@@ -45,10 +45,12 @@ export function Clues() {
   const r = game?.round;
   const currentId = r ? r.turnOrder[r.currentTurn] : undefined;
   const isMine = !!you && currentId === you.playerId;
+  // the turn we arrived on: only clues submitted while we're watching get a gag beat
+  const firstTurn = useRef(r?.currentTurn ?? 0);
 
   useEffect(() => {
     if (isMine) {
-      buzz([60, 40, 60]);
+      haptic('heartbeat');
       sfx.yourTurn();
     }
     const t = window.setTimeout(() => sfx.stamp(), 300);
@@ -91,10 +93,16 @@ export function Clues() {
           if (!p) return null;
           const state = i < r.currentTurn ? 'is-done' : i === r.currentTurn ? 'is-current' : '';
           return (
-            <li key={id} className={`turn-strip__item ${state}`} aria-current={i === r.currentTurn ? 'step' : undefined} style={{ ['--r' as string]: `${[-3, 2, -1, 3, -2][i % 5]}deg` }}>
+            <li key={id} className={`turn-strip__item ${state}`} aria-current={i === r.currentTurn ? 'step' : undefined}>
               <span className={`pin ${i === r.currentTurn ? 'pin--red' : ''}`} aria-hidden="true" />
               <span className="turn-strip__av">
-                <Avatar avatar={p.avatar} color={p.color} size={44} label="" />
+                <Avatar
+                  avatar={p.avatar}
+                  color={p.color}
+                  size={44}
+                  label=""
+                  beat={i === r.currentTurn - 1 && r.currentTurn > firstTurn.current ? { id: 'gag', key: r.currentTurn } : undefined}
+                />
               </span>
               <span className="turn-strip__name">{p.id === you.playerId ? 'You' : p.name}</span>
               {i < r.currentTurn && (
@@ -111,7 +119,7 @@ export function Clues() {
         <span className="tape" aria-hidden="true" />
         <div className="spotlight__photo">
           <CountdownRing endsAt={r.phaseEndsAt} totalSeconds={game.settings.clueSeconds} size={168} tick={isMine} label="Turn time left">
-            {cur && <Avatar avatar={cur.avatar} color={cur.color} size={110} label={cur.name} className="spotlight__av" />}
+            {cur && <Avatar avatar={cur.avatar} color={cur.color} size={110} label={cur.name} className="spotlight__av" beat={{ id: 'nudge', key: r.currentTurn }} />}
           </CountdownRing>
           <Stamp rot={-10} slam delay={250} className="spotlight__stamp">
             On the record

@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { useGame, usePlayers } from '../state/GameProvider';
 import { Avatar } from './Avatar';
 import { sfx } from '../lib/sound';
+import { createStampThrottle } from '../lib/stampThrottle';
 import './Paper.css';
 
 /* ---------------- Masthead ---------------- */
@@ -51,23 +52,28 @@ export function Redacted({ text = 'XXXXXXXX', label = 'Redacted', className = ''
 /** Contract reaction ids (emoji) → stamp label. Unknown ids fall back to the emoji itself. */
 export const REACTION_STAMPS: Record<string, { label: string; tone: StampTone; rot: number; name: string }> = {
   '😂': { label: 'LOL', tone: 'ink', rot: -6, name: 'laughing' },
-  '🤨': { label: 'SUS', tone: 'red', rot: 5, name: 'suspicious' },
-  '😱': { label: '¡AY!', tone: 'blue', rot: -4, name: 'shocked' },
-  '👀': { label: 'WATCHING', tone: 'ink', rot: 3, name: 'watching' },
-  '🔥': { label: '¡PUM!', tone: 'red', rot: -7, name: 'fire' },
-  '🤥': { label: 'LIES!', tone: 'solid', rot: 6, name: 'lies' }
+  '🤨': { label: 'SUS', tone: 'red', rot: -8, name: 'suspicious' },
+  '😱': { label: '¡AY!', tone: 'blue', rot: -7, name: 'shocked' },
+  '👀': { label: 'WATCHING', tone: 'ink', rot: -9, name: 'watching' },
+  '🔥': { label: '¡PUM!', tone: 'red', rot: -10, name: 'fire' },
+  '🤥': { label: 'LIES!', tone: 'solid', rot: -6, name: 'lies' }
 };
 
-export const reactionStamp = (emoji: string) => REACTION_STAMPS[emoji] ?? { label: emoji, tone: 'ink' as StampTone, rot: -4, name: emoji };
+export const reactionStamp = (emoji: string) => REACTION_STAMPS[emoji] ?? { label: emoji, tone: 'ink' as StampTone, rot: -7, name: emoji };
+
+/** How many stamps the lane shows at once (newest win). */
+const LANE_MAX = 4;
 
 /**
- * Global layer: incoming reactions slam onto the screen as rubber stamps (with a thunk).
- * Rendered once from TopBar. Replaces the old floating emoji.
+ * Global layer: incoming reactions slam into a fixed lane along the top edge as rubber stamps,
+ * hold, then exit quickly — they never land on top of clues or ballots. Sound is throttled:
+ * one full thunk per ~1.2s, then a quieter tap, then silence. Rendered once from TopBar.
  */
 export function ReactionStampLayer() {
   const { reactions } = useGame();
   const { byId } = usePlayers();
   const seen = useRef(new Set<string | number>());
+  const throttle = useRef(createStampThrottle());
   useEffect(() => {
     let fresh = false;
     reactions.forEach((r) => {
@@ -76,17 +82,19 @@ export function ReactionStampLayer() {
         fresh = true;
       }
     });
-    if (fresh) sfx.stamp();
+    if (!fresh) return;
+    const level = throttle.current(Date.now());
+    if (level === 'full') sfx.stamp();
+    else if (level === 'soft') sfx.stampSoft();
   }, [reactions]);
   return (
     <div className="rstamps" aria-hidden="true">
-      {reactions.map((r, i) => {
+      {reactions.slice(-LANE_MAX).map((r) => {
         const p = byId(r.playerId);
         const s = reactionStamp(r.emoji);
-        const top = 18 + ((Math.abs(r.drift) * 7 + i * 13) % 52);
         return (
-          <div key={r.id} className="rstamp" style={{ left: `${Math.min(70, Math.max(4, r.left - 12))}%`, top: `${top}%` }}>
-            <Stamp tone={s.tone} rot={s.rot + r.drift / 10} slam className="rstamp__mark">
+          <div key={r.id} className="rstamp">
+            <Stamp tone={s.tone} rot={s.rot} slam className="rstamp__mark">
               {s.label}
             </Stamp>
             {p && (

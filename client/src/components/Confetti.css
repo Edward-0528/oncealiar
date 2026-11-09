@@ -12,7 +12,6 @@
   background-repeat: no-repeat;
   background-position: 4px 4px;
   border: 1px solid rgba(17, 17, 17, 0.4);
-  box-shadow: 2px 2px 0 rgba(17, 17, 17, 0.25);
 }
 .confetti__p.is-head {
   display: grid;

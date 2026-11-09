@@ -78,7 +78,7 @@ describe('App (mock mode)', () => {
     ['clues', /turn/i],
     ['discussion', /who’s the spy/i],
     ['voting', /tap a player to accuse/i],
-    ['liar-guess', /the spy is guessing/i],
+    ['liar-guess', /the spy is making their last guess/i],
     ['results', /the votes are in/i],
     ['game-over', /game over/i]
   ])('renders the %s phase', async (phase, text) => {
