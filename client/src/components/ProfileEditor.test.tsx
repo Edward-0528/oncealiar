@@ -114,18 +114,26 @@ describe('ProfileEditor (Backstage picker)', () => {
     expect(isCodename(sent.name)).toBe(true);
   });
 
-  it('edits the codename inline from the NAME button', () => {
+  it('has an always-visible name field, and tapping the marquee name focuses it', () => {
     const submit = vi.fn();
     render(<Harness initial={sam} onSubmit={submit} ctaLabel="Save" />);
-    fireEvent.click(screen.getByRole('button', { name: /edit codename/i }));
-    const input = screen.getByRole('textbox', { name: /your codename/i });
+    const input = screen.getByRole('textbox', { name: /your name/i });
     expect(input).toHaveAttribute('maxLength', '16');
+    fireEvent.click(screen.getByRole('button', { name: /tap to change it/i }));
+    expect(input).toHaveFocus();
     fireEvent.change(input, { target: { value: 'Velvet Ninja' } });
-    fireEvent.keyDown(input, { key: 'Enter' });
-    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
-    expect(screen.getByText('Velvet Ninja')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /your name: velvet ninja/i })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     expect(submit).toHaveBeenCalledWith(expect.objectContaining({ name: 'Velvet Ninja' }));
+  });
+
+  it('the dice next to the name gives a fresh codename', () => {
+    const spy = vi.fn();
+    render(<Harness initial={sam} spy={spy} />);
+    fireEvent.click(screen.getByRole('button', { name: /random codename/i }));
+    const p = spy.mock.calls.at(-1)![0] as PlayerProfile;
+    expect(isCodename(p.name)).toBe(true);
+    expect(p.name).not.toBe(sam.name);
   });
 
   it('shuffle never lands on a character someone else already wears', () => {

@@ -172,7 +172,6 @@ export function ProfileEditor({
 
   const [tab, setTab] = useState(() => rackOf(value.avatar));
   const [peek, setPeek] = useState<AvatarId | null>(null);
-  const [editing, setEditing] = useState(!!autoFocusName);
   const [unlockOpen, setUnlockOpen] = useState(false);
   const nameInput = useRef<HTMLInputElement>(null);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -191,11 +190,11 @@ export function ProfileEditor({
   }, []);
 
   useEffect(() => {
-    if (editing) {
-      nameInput.current?.focus();
-      nameInput.current?.select();
-    }
-  }, [editing]);
+    if (!autoFocusName) return;
+    nameInput.current?.focus();
+    nameInput.current?.select();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const rack = RACKS[tab];
   const locked = rack.premium && !premiumOk;
@@ -249,7 +248,14 @@ export function ProfileEditor({
 
   const finishName = () => {
     if (!value.name.trim()) onChange({ ...value, name: codename(value.avatar, names) });
-    setEditing(false);
+  };
+  const editName = () => {
+    nameInput.current?.focus();
+    nameInput.current?.select();
+  };
+  const newCodename = () => {
+    sfx.tap();
+    onChange({ ...value, name: codename(value.avatar, [...names, value.name]) });
   };
 
   const submit = () => {
@@ -261,7 +267,6 @@ export function ProfileEditor({
     const name = value.name.trim() || codename(value.avatar, names);
     const p = { ...value, name };
     if (name !== value.name) onChange(p);
-    setEditing(false);
     sfx.pop();
     onSubmit(p);
   };
@@ -274,29 +279,10 @@ export function ProfileEditor({
         <section className={`bs__stage ${closed ? 'is-closed' : ''}`} style={{ '--spot': colorVar(value.color) } as React.CSSProperties} aria-label="Stage">
           <div className="bs__marquee">
             <span className="bs__marquee-kicker">TONIGHT STARRING</span>
-            {editing ? (
-              <input
-                ref={nameInput}
-                className="bs__name-input"
-                value={value.name}
-                maxLength={16}
-                aria-label="Your codename"
-                autoComplete="nickname"
-                enterKeyHint="done"
-                data-autofocus={autoFocusName ? true : undefined}
-                onChange={(e) => onChange({ ...value, name: e.target.value })}
-                onBlur={finishName}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === 'Escape') {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    finishName();
-                  }
-                }}
-              />
-            ) : (
-              <span className="bs__marquee-name">{value.name.trim() || 'Mystery Guest'}</span>
-            )}
+            <button type="button" className="bs__marquee-name" onClick={editName} aria-label={`Your name: ${value.name.trim() || 'Mystery Guest'}. Tap to change it`}>
+              <span>{value.name.trim() || 'Mystery Guest'}</span>
+              <Icon name="edit" size={14} />
+            </button>
             <span className="bs__marquee-as">as {shownInfo.name}</span>
           </div>
 
@@ -315,17 +301,6 @@ export function ProfileEditor({
               <Icon name="left" size={20} />
             </button>
           )}
-          <button
-            type="button"
-            className="bs__stage-btn bs__name-btn"
-            aria-label={editing ? 'Done editing codename' : 'Edit codename'}
-            aria-expanded={editing}
-            onMouseDown={(e) => editing && e.preventDefault()}
-            onClick={() => (editing ? finishName() : setEditing(true))}
-          >
-            <Icon name={editing ? 'check' : 'edit'} size={16} />
-            {editing ? 'DONE' : 'NAME'}
-          </button>
           <button type="button" className="bs__stage-btn bs__shuffle" onClick={shuffle} aria-label="Shuffle character and color">
             <Icon name="dice" size={16} />
             SHUFFLE
@@ -395,6 +370,35 @@ export function ProfileEditor({
             </div>
           </div>
 
+          <div className="bs__namefield">
+            <label className="bs__namefield-label" htmlFor={`${uid}-name`}>
+              Your name
+            </label>
+            <div className="bs__namefield-row">
+              <input
+                id={`${uid}-name`}
+                ref={nameInput}
+                className="bs__name-input"
+                value={value.name}
+                maxLength={16}
+                placeholder="Type your name"
+                autoComplete="nickname"
+                enterKeyHint="done"
+                data-autofocus={autoFocusName ? true : undefined}
+                onChange={(e) => onChange({ ...value, name: e.target.value })}
+                onBlur={finishName}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.currentTarget.blur();
+                  }
+                }}
+              />
+              <button type="button" className="bs__namefield-dice" onClick={newCodename} aria-label="Give me a random codename">
+                <Icon name="dice" size={18} />
+              </button>
+            </div>
+
           <div className="bs__spot" role="group" aria-labelledby={`${uid}-spot`}>
             <span className="bs__spot-label" id={`${uid}-spot`}>
               Spotlight
@@ -420,6 +424,7 @@ export function ProfileEditor({
           </div>
 
           <div className="bs__cta-wrap">
+            </div>
             <button type="button" className={`bs__cta ${peeking ? 'is-peek' : ''}`} onClick={submit} disabled={busy} aria-busy={busy || undefined}>
               {label}
             </button>

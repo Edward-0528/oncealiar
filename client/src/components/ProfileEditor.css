@@ -42,30 +42,61 @@
   text-align: center;
 }
 .bs__marquee-kicker { font-family: 'Special Elite', var(--font-type), monospace; font-size: 10px; color: #ffe14d; letter-spacing: 0.18em; }
-.bs__marquee-name,
-.bs__name-input {
+.bs__marquee-name {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  max-width: 100%;
+  min-height: 32px;
+  padding: 0 4px;
+  border: 0;
+  border-bottom: 2px dashed rgba(255, 225, 77, 0.7);
+  background: none;
   font-family: 'Anton', var(--font-display), Impact, sans-serif;
   font-size: 22px;
   line-height: 1.1;
   color: #fff;
   text-transform: uppercase;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
+  cursor: pointer;
 }
+.bs__marquee-name > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.bs__marquee-name svg { flex: 0 0 auto; color: #ffe14d; }
+.bs__marquee-name:hover { border-bottom-color: #ffe14d; }
+.bs__marquee-name:focus-visible { outline: 3px solid #ffe14d; outline-offset: 2px; }
+
+/* always-visible name field, under the case files */
+.bs__namefield { display: flex; flex-direction: column; gap: 4px; }
+.bs__namefield-label { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
+.bs__namefield-row { display: flex; gap: 8px; }
 .bs__name-input {
-  width: 13ch;
-  min-height: 32px;
-  padding: 0 6px;
-  margin: 1px 0;
-  border: 0;
-  border-bottom: 2px dashed #ffe14d;
-  background: #2a2222;
-  text-align: center;
+  flex: 1;
+  min-width: 0;
+  height: 48px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  border: 3px solid var(--ink, #111);
   border-radius: 0;
+  background: #fff;
+  color: #111;
+  font: 400 18px 'Special Elite', var(--font-type), monospace;
 }
-.bs__name-input:focus-visible { outline: 3px solid #ffe14d; outline-offset: 2px; }
+.bs__name-input::placeholder { color: #8a8478; }
+.bs__name-input:focus-visible { outline: 3px solid var(--ink, #111); outline-offset: 2px; box-shadow: 4px 4px 0 var(--ink, #111); }
+.bs__namefield-dice {
+  flex: 0 0 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 3px solid var(--ink, #111);
+  background: #ffe14d;
+  color: #111;
+  box-shadow: 3px 3px 0 var(--ink, #111);
+  cursor: pointer;
+}
+.bs__namefield-dice:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink, #111); }
+.bs__namefield-dice:focus-visible { outline: 3px solid var(--ink, #111); outline-offset: 2px; }
 .bs__marquee-as { font-family: 'Special Elite', var(--font-type), monospace; font-size: 11px; color: #f6f2ea; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 
 .bs__actor {
@@ -140,7 +171,6 @@
 }
 .bs__stage-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #000; }
 .bs__stage-btn:focus-visible { outline: 3px solid #ffe14d; outline-offset: 2px; }
-.bs__name-btn { left: 12px; bottom: 26px; }
 .bs__shuffle { right: 12px; bottom: 26px; background: #ffe14d; }
 .bs__back { left: 10px; top: 30px; width: 44px; padding: 0; }
 
@@ -310,7 +340,7 @@
   }
   .bs__marquee { top: 26px; padding: 8px 20px 10px; }
   .bs__marquee-kicker { font-size: 12px; }
-  .bs__marquee-name, .bs__name-input { font-size: 30px; }
+  .bs__marquee-name { font-size: 30px; }
   .bs__marquee-as { font-size: 13px; }
   .bs__actor { bottom: 48px; }
   .bs__pedestal { bottom: 26px; height: 34px; }
