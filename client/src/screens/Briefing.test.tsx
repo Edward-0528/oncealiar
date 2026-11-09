@@ -58,7 +58,7 @@ describe('Briefing screen', () => {
     const { emit } = mockApp('briefing', { n: '4' });
     const btn = await screen.findByRole('button', { name: /i’m ready/i });
     fireEvent.click(btn);
-    expect(emit).toHaveBeenCalledWith('briefing:ready');
+    expect(emit).toHaveBeenCalledWith('briefing:ready', expect.any(Function));
     const done = await screen.findByRole('button', { name: /you’re ready/i });
     expect(done).toBeDisabled();
     expect(screen.getByText(/1\/4 ready · waiting on Maya, Jonah \+1/)).toBeInTheDocument();

@@ -295,17 +295,17 @@ export interface ClientToServerEvents {
   /** host only: end the session for everyone (room is closed) */
   'room:end': (ack?: Ack) => void;
   'game:start': (ack?: Ack) => void; // host only
-  'role:ready': () => void; // during role-reveal
-  'briefing:ready': () => void; // during briefing: "I get it" (uses Player.ready)
-  'clue:submit': (text: string) => void; // typed mode, current turn only
-  'clue:done': () => void; // spoken mode: current player (or host) ends their turn
-  'phase:skip': () => void; // host only: end the current timed phase now
-  'vote:cast': (targetId: PlayerID) => void; // changeable until voting ends
+  'role:ready': (ack?: Ack) => void; // during role-reveal
+  'briefing:ready': (ack?: Ack) => void; // during briefing: "I get it" (uses Player.ready)
+  'clue:submit': (text: string, ack?: Ack) => void; // typed mode, current turn only
+  'clue:done': (ack?: Ack) => void; // spoken mode: current player (or host) ends their turn
+  'phase:skip': (ack?: Ack) => void; // host only: end the current timed phase now
+  'vote:cast': (targetId: PlayerID, ack?: Ack) => void; // changeable until voting ends
   /** liar only. During clues/discussion/voting: lock in an early guess (once per round,
    *  +1 if right, and it becomes your final answer if you're caught). During liar-guess: final guess. */
-  'guess:submit': (word: string) => void;
-  'round:next': () => void; // host only, from results
-  'game:restart': () => void; // host only, from game-over → lobby, scores reset
+  'guess:submit': (word: string, ack?: Ack) => void;
+  'round:next': (ack?: Ack) => void; // host only, from results
+  'game:restart': (ack?: Ack) => void; // host only, from game-over → lobby, scores reset
   reaction: (emoji: string) => void;
   /** client reports page visibility (document.visibilitychange / pagehide) */
   presence: (state: 'visible' | 'hidden') => void;

@@ -27,8 +27,8 @@ export function Toasts() {
   );
 }
 
-/** Blips shorter than this are invisible to the player. */
-export const RECONNECT_PILL_DELAY_MS = 2000;
+/** Blips shorter than this are invisible to the player (kept short: buttons pause the moment the link drops). */
+export const RECONNECT_PILL_DELAY_MS = 400;
 
 /**
  * Calm connection indicator: nothing for short blips, a small "Reconnecting…" pill after 2s,
@@ -41,6 +41,17 @@ export function ReconnectBanner() {
   const visible = usePageVisible();
   const wakeBanner = useWakeBannerShown();
   const [show, setShow] = useState(false);
+  const [offline, setOffline] = useState(typeof navigator !== 'undefined' && navigator.onLine === false);
+  useEffect(() => {
+    const on = () => setOffline(false);
+    const off = () => setOffline(true);
+    window.addEventListener('online', on);
+    window.addEventListener('offline', off);
+    return () => {
+      window.removeEventListener('online', on);
+      window.removeEventListener('offline', off);
+    };
+  }, []);
   const wasShown = useRef(false);
   const inGame = useRef(false);
   inGame.current = !!game;
@@ -65,7 +76,7 @@ export function ReconnectBanner() {
     <div className="reconnect" role="status" aria-live="polite">
       <span className="reconnect__pill">
         <span className="reconnect__spin" aria-hidden="true" />
-        {game ? 'Reconnecting…' : 'Connecting to the game server…'}
+        {offline ? "You're offline. Buttons paused." : game ? 'Reconnecting… buttons paused' : 'Connecting to the game server…'}
       </span>
     </div>
   );

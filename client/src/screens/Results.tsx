@@ -15,6 +15,7 @@ import { CoachTip } from '../components/coach/CoachTip';
 import { Stamp } from '../components/Paper';
 import { RoundNotes, ScoreBreakdown } from '../components/mechanics';
 import './Results.css';
+import { ActionButton } from '../components/ActionButton';
 
 const STAGES = ['votes', 'unmask', 'word', 'winner', 'scores'] as const;
 type Stage = (typeof STAGES)[number];
@@ -284,15 +285,16 @@ export function Results() {
           </div>
           <div className="results__next">
             {isHost ? (
-              <button
+              <ActionButton
                 className="btn btn--primary btn--lg btn--block"
-                onClick={() => {
+                pendingLabel="One sec…"
+                onAct={() => {
                   sfx.paper();
-                  actions.next();
+                  return actions.next();
                 }}
               >
                 {last ? 'Print the final edition' : 'Next round'} <Icon name="right" />
-              </button>
+              </ActionButton>
             ) : (
               <div className="waitbar">
                 <span className="waitbar__dot" aria-hidden="true" />

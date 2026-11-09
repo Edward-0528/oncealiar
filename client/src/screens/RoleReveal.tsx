@@ -9,6 +9,7 @@ import { AVATAR_INFO, SCORE, type AvatarId } from '@oncealiar/shared';
 import { CoachTip } from '../components/coach/CoachTip';
 import { Stamp, Redacted, Fingerprint } from '../components/Paper';
 import './RoleReveal.css';
+import { ActionButton } from '../components/ActionButton';
 
 export function RoleReveal() {
   const { game, you, actions } = useGame();
@@ -175,14 +176,15 @@ export function RoleReveal() {
       <p className="reveal__burn type">{revealed && !sticky ? 'This file self-destructs when you let go.' : revealed ? 'Tap the file to close it.' : seen ? 'File sealed. Hold it to peek again.' : 'Make sure nobody is reading over your shoulder.'}</p>
 
       <div className="reveal__foot" ref={footRef}>
-        <button
+        <ActionButton
           className={`btn btn--lg btn--block ${me?.ready ? 'btn--success' : 'btn--primary'}`}
-          disabled={!seen || me?.ready}
-          onClick={() => {
+          disabled={!!me?.ready}
+          blockedReason={!seen ? 'Hold the card to read your file first' : null}
+          onAct={() => {
             sfx.stamp();
             setRevealed(false);
             setSticky(false);
-            actions.ready();
+            return actions.ready();
           }}
         >
           {me?.ready ? (
@@ -194,7 +196,7 @@ export function RoleReveal() {
           ) : (
             'Open your file first'
           )}
-        </button>
+        </ActionButton>
         <div className="ready-row" aria-label={`${readyCount} of ${players.length} players ready`}>
           <div className="ready-row__avs">
             {players.map((p) => (

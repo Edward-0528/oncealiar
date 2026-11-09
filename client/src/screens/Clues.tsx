@@ -40,6 +40,7 @@ export function Clues() {
   const { game, you, actions } = useGame();
   const { byId, isHost } = usePlayers();
   const [text, setText] = useState('');
+  const [sending, setSending] = useState(false);
   const stripRef = useRef<HTMLOListElement>(null);
   const actionRef = useRef<HTMLDivElement>(null);
   const r = game?.round;
@@ -68,11 +69,16 @@ export function Clues() {
   const cur = byId(currentId);
   const typed = game.settings.clueMode === 'typed';
 
-  const submit = () => {
+  const submit = async () => {
     const word = text.trim().split(/\s+/)[0];
-    if (!word) return;
+    if (!word || sending) return;
     sfx.pop();
-    actions.submitClue(word.slice(0, 24));
+    setSending(true);
+    try {
+      await actions.submitClue(word.slice(0, 24));
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -161,8 +167,8 @@ export function Clues() {
               placeholder="One word…"
               onChange={(e) => setText(e.target.value.replace(/\s/g, ''))}
             />
-            <button className="btn btn--primary" type="submit" disabled={!text.trim()} aria-label="Send clue">
-              <Icon name="send" /> Send
+            <button className="btn btn--primary" type="submit" disabled={!text.trim() || sending} aria-label="Send clue" aria-busy={sending || undefined}>
+              <Icon name="send" /> {sending ? 'Sending…' : 'Send'}
             </button>
           </form>
         )}
@@ -179,7 +185,7 @@ export function Clues() {
         )}
         {!isMine && isHost && (
           <button className="btn btn--quiet btn--sm" onClick={() => (typed ? actions.skip() : actions.clueDone())}>
-            <Icon name="skip" size={18} /> Skip {cur?.name ?? 'turn'}
+            <Icon name="skip" size={18} /> {typed ? 'Skip to discussion' : `Skip ${cur?.name ?? 'turn'}`}
           </button>
         )}
         </div>
