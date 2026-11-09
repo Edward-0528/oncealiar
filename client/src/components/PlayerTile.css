@@ -128,3 +128,6 @@ button.ptile:disabled { opacity: 0.6; }
 /* in another app (texting) but still in the round */
 .ptile.is-texting .ptile__disc { opacity: 0.8; }
 .ptile__presence { position: absolute; top: 6px; left: 6px; z-index: 2; }
+
+/* host-added test bot */
+.ptile__bot { background: var(--ink-soft, #3a3530); color: var(--paper, #fbf7ec); }

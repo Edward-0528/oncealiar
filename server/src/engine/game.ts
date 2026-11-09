@@ -68,6 +68,8 @@ const ACTIVE_PHASES: Phase[] = ['role-reveal', 'clues', 'discussion', 'voting', 
 
 export interface InternalPlayer extends PlayerProfile {
   id: PlayerID;
+  /** added by the host from the lobby; plays randomly */
+  isBot?: boolean;
   token: string;
   score: number;
   /** false once offline (away players are still connected) */
@@ -217,6 +219,16 @@ export class Game {
     return name;
   }
 
+  /** flag a player as a bot (set by the room manager for server-spawned bots) */
+  markBot(id: PlayerID): void {
+    const p = this.get(id);
+    if (p) p.isBot = true;
+  }
+
+  get botCount(): number {
+    return this.players.filter((p) => p.isBot).length;
+  }
+
   updateProfile(id: PlayerID, profile: PlayerProfile): void {
     const p = this.mustGet(id);
     p.name = this.uniqueName(profile.name, id);
@@ -291,8 +303,8 @@ export class Game {
     p.disconnectedAt = now;
     if (p.isHost) {
       const next =
-        this.players.find((x) => x.presence === 'online' && x.id !== p.id) ??
-        this.players.find((x) => x.connected && x.id !== p.id);
+        this.players.find((x) => !x.isBot && x.presence === 'online' && x.id !== p.id) ??
+        this.players.find((x) => !x.isBot && x.connected && x.id !== p.id);
       if (next) {
         this.setHost(next.id);
         this.toasts.push(`${next.name} is now the host`);
@@ -391,8 +403,9 @@ export class Game {
   /** Make sure someone is host, preferring connected players in join order. */
   private ensureHost(): void {
     if (this.players.length === 0 || this.host) return;
-    const next = this.players.find((p) => p.connected) ?? this.players[0];
-    next.isHost = true;
+    // bots never host: with only bots left, nobody is host (the room empties out)
+    const next = this.players.find((p) => !p.isBot && p.connected) ?? this.players.find((p) => !p.isBot);
+    if (next) next.isHost = true;
   }
 
   /**
@@ -417,8 +430,8 @@ export class Game {
     const h = this.host;
     if (h && !h.connected && h.disconnectedAt !== null && now - h.disconnectedAt > hostGraceMs) {
       const next =
-        this.players.find((p) => p.presence === 'online' && p.id !== h.id) ??
-        this.players.find((p) => p.connected && p.id !== h.id);
+        this.players.find((p) => !p.isBot && p.presence === 'online' && p.id !== h.id) ??
+        this.players.find((p) => !p.isBot && p.connected && p.id !== h.id);
       if (next) {
         this.setHost(next.id);
         this.toasts.push(`${next.name} is now the host`);
@@ -1056,6 +1069,7 @@ export class Game {
       connected: p.connected,
       presence: p.presence,
       isHost: p.isHost,
+      ...(p.isBot ? { isBot: true } : {}),
       ready: p.ready,
       hasVoted: this.phase === 'voting' ? this.votes.has(p.id) : false
     }));

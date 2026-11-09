@@ -26,6 +26,7 @@ beforeAll(async () => {
   srv = createApp({ packs: FIXTURE_PACKS, premiumCodes: ['GOLD'] });
   await new Promise<void>((r) => srv.httpServer.listen(0, r));
   url = `http://localhost:${(srv.httpServer.address() as AddressInfo).port}`;
+  srv.manager.setSelfUrl(url);
 });
 
 afterAll(async () => {
@@ -241,5 +242,30 @@ describe('socket integration', () => {
     a.emit('room:leave');
     await until(() => !srv.manager.rooms.has(res.code));
     a.disconnect();
+  });
+});
+
+describe('in-lobby bots', () => {
+  it('lets only the host add bots in the lobby; bots are flagged, never host, and can be kicked', async () => {
+    const host = await client();
+    const made = await emitAck<any>((ack) => host.emit('room:create', { name: 'Hostie', avatar: 'duck', color: 'coral' }, ack));
+    expect(made.ok).toBe(true);
+    const guest = await client();
+    await emitAck<any>((ack) => guest.emit('room:join', made.code, { name: 'Guesty', avatar: 'cat', color: 'sky' }, ack));
+
+    const denied = await emitAck<any>((ack) => guest.emit('room:addBot', ack));
+    expect(denied.ok).toBe(false);
+
+    expect((await emitAck<any>((ack) => host.emit('room:addBot', ack))).ok).toBe(true);
+    await until(() => (host.state?.players.length ?? 0) === 3, 4000);
+    const bot = host.state!.players.find((p) => p.isBot)!;
+    expect(bot).toBeTruthy();
+    expect(bot.isHost).toBe(false);
+    expect(host.state!.players.filter((p) => !p.isBot).every((p) => !p.isBot)).toBe(true);
+
+    host.emit('player:kick', bot.id);
+    await until(() => (host.state?.players.length ?? 0) === 2, 4000);
+    host.close();
+    guest.close();
   });
 });

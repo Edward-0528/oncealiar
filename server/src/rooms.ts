@@ -22,6 +22,7 @@ import { AWAY_GRACE_MS, AWAY_TURN_MS } from '@oncealiar/shared';
 import { Game, GameError } from './engine/game.js';
 import { isReaction, normalizeCode, randomCode, RateLimiter, sanitizeProfile } from './validation.js';
 import { checkUnlockCode } from './premium.js';
+import { spawnBot } from './botBrain.js';
 
 export interface SocketData {
   code?: string;
@@ -52,17 +53,30 @@ export interface RoomManagerOptions {
   lobbyRemoveMs?: number;
   emptyRoomMs?: number;
   sweepMs?: number;
+  /** this server's own base URL, so the host can add in-lobby bots ('' = bots disabled) */
+  selfUrl?: string;
+  /** max bots per room */
+  maxBots?: number;
 }
 
 export class RoomManager {
   readonly rooms = new Map<string, Room>();
   private reactions = new RateLimiter(5, 3000);
   private sweepTimer: ReturnType<typeof setInterval>;
+  /** set once the HTTP server knows its own address (tests listen on a random port) */
+  setSelfUrl(url: string): void {
+    this.opts.selfUrl = url;
+  }
+
+  /** secret the server's own bots present at handshake, so their seats are flagged as bots */
+  private readonly botKey = nanoid(32);
   private opts: Required<RoomManagerOptions>;
 
   constructor(private io: IO, opts: RoomManagerOptions) {
     this.opts = {
       premiumCodes: [],
+      selfUrl: '',
+      maxBots: 5,
       hostGraceMs: 0,
       awayGraceMs: AWAY_GRACE_MS,
       awayTurnMs: AWAY_TURN_MS,
@@ -153,6 +167,7 @@ export class RoomManager {
       try {
         this.detach(socket, true);
         const player = room.game.addPlayer(p, nanoid(24), Date.now());
+        if ((socket.handshake.auth as { botKey?: unknown } | undefined)?.botKey === this.botKey) room.game.markBot(player.id);
         this.bind(socket, room, player.id);
         reply<JoinResult>(ack, { ok: true, code: room.game.code, playerId: player.id, token: player.token });
       } catch (e) {
@@ -200,6 +215,18 @@ export class RoomManager {
           }
         }
       });
+    });
+
+    socket.on('room:addBot', (ack) => {
+      const room = socket.data.code ? this.rooms.get(socket.data.code) : undefined;
+      const pid = socket.data.playerId;
+      if (!room || !pid || !room.game.get(pid)?.isHost) return reply(ack, { ok: false, error: 'Only the host can add bots' });
+      if (room.game.phase !== 'lobby') return reply(ack, { ok: false, error: 'Bots can only join in the lobby' });
+      if (!this.opts.selfUrl) return reply(ack, { ok: false, error: 'Bots are not available on this server' });
+      if (room.game.botCount >= this.opts.maxBots) return reply(ack, { ok: false, error: `Up to ${this.opts.maxBots} bots per room` });
+      if (room.game.players.length >= room.game.settings.maxPlayers) return reply(ack, { ok: false, error: 'Room is full' });
+      spawnBot({ url: this.opts.selfUrl, code: room.game.code, index: room.game.botCount, botKey: this.botKey, leaveWhenAloneMs: 30_000 });
+      reply(ack, { ok: true });
     });
 
     socket.on('game:start', (ack) => act((g, pid, now) => g.start(pid, now), ack));
