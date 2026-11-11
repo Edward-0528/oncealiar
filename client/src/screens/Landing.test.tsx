@@ -4,6 +4,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { Landing } from './Landing';
 
+vi.mock('../state/account', () => ({
+  useAccount: () => ({ enabled: true, session: null, me: null, purchase: false, priceLabel: '', client: {} })
+}));
+vi.mock('../components/AccountSheet', () => ({
+  AccountSheet: ({ open }: { open: boolean }) => (open ? <div role="dialog">Sign in sheet</div> : null)
+}));
+
 const assign = vi.fn();
 beforeEach(() => {
   assign.mockClear();
@@ -14,14 +21,15 @@ afterEach(cleanup);
 describe('Landing', () => {
   it('leads with the promise and the two ways in', () => {
     render(<Landing />);
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/everyone knows the codeword\. except the spy/i);
-    expect(screen.getAllByRole('button', { name: /start a game/i }).length).toBeGreaterThan(0);
-    expect(screen.getAllByLabelText(/room code/i).length).toBe(2);
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/game night, sorted in 30 seconds/i);
+    for (const o of ['Living room', 'Video call', 'Road trip', 'Pub table']) expect(screen.getByText(o)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /host a new game/i })).toBeTruthy();
+    expect(screen.getAllByLabelText(/room code/i).length).toBe(1);
   });
 
-  it('"Start a game" opens the app at /start', () => {
+  it('"Host a new game" opens the app at /start', () => {
     render(<Landing />);
-    fireEvent.click(screen.getAllByRole('button', { name: /start a game/i })[0]);
+    fireEvent.click(screen.getByRole('button', { name: /host a new game/i }));
     expect(assign).toHaveBeenCalledWith('/start');
   });
 
@@ -43,6 +51,13 @@ describe('Landing', () => {
     fireEvent.submit(input.closest('form')!);
     expect(screen.getByRole('alert')).toHaveTextContent(/4 letters/i);
     expect(assign).not.toHaveBeenCalled();
+  });
+
+  it('offers optional sign-in from the header and the save card', () => {
+    render(<Landing />);
+    expect(screen.getByText(/guests play free/i)).toBeTruthy();
+    fireEvent.click(screen.getAllByRole('button', { name: /sign in/i })[0]);
+    expect(screen.getByRole('dialog')).toBeTruthy();
   });
 
   it('states the real player range, not a stale one', () => {

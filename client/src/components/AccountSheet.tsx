@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Sheet } from './Sheet';
 import { Icon } from './Icon';
 import { useAccount } from '../state/account';
-import { useGame } from '../state/GameProvider';
+import { useGame, useGameOptional } from '../state/GameProvider';
 import { emailLooksValid, normalizeOtp, type HistoryRow } from '../lib/account';
 import './AccountSheet.css';
 
@@ -14,7 +14,7 @@ export function historyLine(h: HistoryRow): string {
 
 function SignIn() {
   const { client } = useAccount();
-  const { toast } = useGame();
+  const toast = useGameOptional()?.toast ?? (() => {}); // the landing page has no game provider
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [code, setCode] = useState('');
@@ -44,7 +44,14 @@ function SignIn() {
         else setError(res.error);
       }}
     >
-      <p className="dim">Optional. Sign in to keep your game history and use a Party Pass on any phone. Guests play free, no account needed.</p>
+      {!sent && (
+        <>
+          <p className="dim">
+            <b>Optional.</b> Guests play everything for free. Sign in only to keep your game history and use a Party Pass on any phone.
+          </p>
+          <p className="account__hint">We’ll email you a 6-digit code. No password to remember.</p>
+        </>
+      )}
       <label className="field">
         <span className="field__label">Email</span>
         <input
@@ -61,7 +68,7 @@ function SignIn() {
       </label>
       {sent && (
         <>
-          <p className="account__hint">We emailed {email.trim()}. Tap the sign-in link in that email, or type the code here if it includes one.</p>
+          <p className="account__hint">We emailed a 6-digit code to {email.trim()}. Type it here to sign in. You can also tap the link in that email.</p>
           <label className="field">
             <span className="field__label">Code</span>
             <input
