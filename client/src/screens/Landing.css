@@ -14,6 +14,7 @@
 
 .land__panel { background: var(--ink); color: var(--news); padding: 16px; display: flex; flex-direction: column; gap: 12px; box-shadow: 5px 5px 0 var(--siren); }
 .land__panel .land__code { background: var(--news); min-height: 64px; font-size: 34px; }
+.land__panel .eyebrow { color: var(--news); }
 .land__panel .land__or { color: #e6dca0; justify-content: center; }
 .land__panel .land__or::before, .land__panel .land__or::after { display: none; }
 .land__panel .land__bad { color: #ffb4ae; }

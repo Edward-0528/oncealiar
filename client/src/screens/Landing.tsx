@@ -123,7 +123,7 @@ export function Landing() {
           <span className="eyebrow">Pick a face</span>
           <div className="land__faces" aria-hidden="true">
             {AVATARS.slice(0, 6).map((a, i) => (
-              <Avatar key={a} avatar={a} color={COLORS[i % COLORS.length]} size={52} label="" animated={false} sticker />
+              <Avatar key={a} avatar={a} color={COLORS[i % COLORS.length]} size={46} label="" animated={false} sticker />
             ))}
           </div>
           <p className="dim">Somebody at the table is wearing a mask.</p>
