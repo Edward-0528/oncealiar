@@ -33,7 +33,9 @@ import {
   type RoundResult,
   type ScoreLine,
   type ScoreRuleId,
-  type Topic
+  type Topic,
+  EXTEND_MS,
+  MAX_EXTENSIONS
 } from '@oncealiar/shared';
 import type { Transport, TransportEvent } from './transport';
 import { endsAfterThisRound, gameEndsAfterResults, targetOf } from './gameEnd';
@@ -625,6 +627,18 @@ export function createMockTransport(phaseParam: string, params: URLSearchParams,
           if (s) {
             s.round.clues.push({ playerId: s.round.turnOrder[s.round.currentTurn], at: Date.now() });
             nextTurn();
+          }
+          break;
+        case 'discussion:ready':
+          if (s && s.round.phase === 'discussion') {
+            player(ME).ready = true;
+            setPhase('voting', s.settings.votingSeconds); // the other mock players are bots: everyone is ready
+          }
+          break;
+        case 'discussion:extend':
+          if (s && s.round.phase === 'discussion' && s.round.phaseEndsAt && (s.round.extensions ?? 0) < MAX_EXTENSIONS) {
+            s.round.phaseEndsAt += EXTEND_MS;
+            s.round.extensions = (s.round.extensions ?? 0) + 1;
           }
           break;
         case 'phase:skip':

@@ -117,7 +117,7 @@ export function spawnBot(opts: BotOptions): Socket<ServerToClientEvents, ClientT
         break;
       case 'discussion':
         acted = key;
-        // the Spy sometimes locks in an early guess (+1 if right, final answer if caught)
+        // the Spy sometimes locks in an early guess (bonus if right, final answer if caught)
         if (me.role === 'liar' && !me.lockedGuess && Math.random() < 0.4) {
           const words = me.topic?.words ?? r.topic?.words;
           if (words) later(() => s.emit('guess:submit', pick(words)), 2000, 8000);

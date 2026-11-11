@@ -99,7 +99,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   familyFriendly: true,
   warmupRound: true,
   briefing: true,
-  targetScore: 15
+  targetScore: 0
 };
 
 /** A topic card: 16 related words. Everyone sees the grid; truth-tellers also
@@ -208,6 +208,8 @@ export interface PublicRound {
   practice?: boolean;
   /** true during the room's warm-up round (longer timers; show coach tips) */
   warmup?: boolean;
+  /** how many +30s extensions the host has used this round's debate (max MAX_EXTENSIONS) */
+  extensions?: number;
 }
 
 export interface PublicGameState {
@@ -300,9 +302,11 @@ export interface ClientToServerEvents {
   'clue:submit': (text: string, ack?: Ack) => void; // typed mode, current turn only
   'clue:done': (ack?: Ack) => void; // spoken mode: current player (or host) ends their turn
   'phase:skip': (ack?: Ack) => void; // host only: end the current timed phase now
+  'discussion:ready': (ack?: Ack) => void; // debate: "ready to vote"; voting starts once every human here is ready
+  'discussion:extend': (ack?: Ack) => void; // host only: +30s of debate (up to MAX_EXTENSIONS times), clears ready taps
   'vote:cast': (targetId: PlayerID, ack?: Ack) => void; // changeable until voting ends
   /** liar only. During clues/discussion/voting: lock in an early guess (once per round,
-   *  +1 if right, and it becomes your final answer if you're caught). During liar-guess: final guess. */
+   *  bonus if right: +2 in clues, +1 in debate, +0 in voting; it becomes your final answer if you're caught). During liar-guess: final guess. */
   'guess:submit': (word: string, ack?: Ack) => void;
   'round:next': (ack?: Ack) => void; // host only, from results
   'game:restart': (ack?: Ack) => void; // host only, from game-over → lobby, scores reset

@@ -13,7 +13,7 @@ export const COACH_COPY: Record<string, string> = {
   'lobby:any': 'Everyone joins on their own phone with the room code. 3–12 players works best.',
   'role-reveal:any': 'Open your file in secret. Agents get the codeword; the Spy gets nothing and must blend in.',
   'clues:any': 'Agents: one word that proves you know it, but not too obvious. Spy: pick a safe word that fits lots of the grid.',
-  'discussion:any': "Whose clue didn't quite fit? Grill them. The Spy can secretly lock in a codeword guess for +1.",
+  'discussion:any': "Whose clue didn't quite fit? Grill them. Everyone ready? Tap Ready to vote. The Spy can lock in a codeword guess early for a bonus that shrinks as the round goes on.",
   'voting:any': 'Vote for who you think the Spy is: +1 for spotting them. The Spy escapes with +3 if not the most-voted.',
   'runoff:any': 'Tie! Sudden death: 10 seconds to choose between the tied players. Still tied? The Spy escapes.',
   'liar-guess:any': 'Caught! The Spy gets one guess at the codeword from the grid to steal the round.',

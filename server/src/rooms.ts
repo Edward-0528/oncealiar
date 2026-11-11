@@ -282,6 +282,8 @@ export class RoomManager {
     socket.on('clue:submit', (text, ack) => act((g, pid, now) => g.submitClue(pid, text, now), ack));
     socket.on('clue:done', (ack) => act((g, pid, now) => g.clueDone(pid, now), ack));
     socket.on('phase:skip', (ack) => act((g, pid, now) => g.skipPhase(pid, now), ack));
+    socket.on('discussion:ready', (ack) => act((g, pid, now) => g.discussionReady(pid, now), ack));
+    socket.on('discussion:extend', (ack) => act((g, pid, now) => g.extendDiscussion(pid, now), ack));
     socket.on('vote:cast', (target, ack) => act((g, pid, now) => g.castVote(pid, target, now), ack));
     socket.on('guess:submit', (word, ack) => act((g, pid, now) => g.submitGuess(pid, word, now), ack));
     socket.on('round:next', (ack) => act((g, pid, now) => g.nextRound(pid, now), ack));

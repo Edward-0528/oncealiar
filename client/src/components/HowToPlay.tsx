@@ -59,7 +59,7 @@ const STEPS: { title: string; body: string; tail?: string; art: React.ReactNode 
   },
   {
     title: 'Caught? One last guess',
-    body: `${RULES_ONE_LINERS.lastGuess} Sure early? The Spy can lock in a guess for +${SCORE['spy-early-lock']} — it becomes their final answer.`,
+    body: `${RULES_ONE_LINERS.lastGuess} ${RULES_ONE_LINERS.earlyLock}`,
     art: (
       <div className="htp-art htp-art--vote">
         <Avatar avatar="gnome" color="lime" size={52} label="" />

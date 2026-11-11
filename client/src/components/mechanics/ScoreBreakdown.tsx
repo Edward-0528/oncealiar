@@ -32,7 +32,8 @@ export function RoundNotes({ result, nameOf }: { result: RoundResult; nameOf: (i
   if (result.runoff?.length) notes.push(`Decided by a sudden-death re-vote between ${result.runoff.map(nameOf).join(' & ')}.`);
   for (const [id, word] of Object.entries(result.lockedGuesses ?? {})) {
     const right = word.toLowerCase() === result.secretWord.toLowerCase();
-    notes.push(`${nameOf(id)} locked in “${word}” early — ${right ? 'spot on! +1' : 'wrong'}.`);
+    const pts = result.scoreBreakdown?.[id]?.find((l) => l.rule === 'spy-early-lock')?.points ?? 0;
+    notes.push(`${nameOf(id)} locked in “${word}” early — ${right ? (pts > 0 ? `spot on! +${pts}` : 'spot on!') : 'wrong'}.`);
   }
   if (!notes.length) return null;
   return (

@@ -35,10 +35,12 @@
  * rounds is a hard cap (ties share the win). targetScore 0 → exactly
  * roundsPerGame rounds. RoundResult.endsGame tells clients which applies.
  *
- * Spy selection is a fair rotation: per-player spy counts for the current game
- * (reset at each new game; joiners start at the current minimum). Spies are
- * drawn uniformly from the lowest-count dealt players, never repeating last
- * round's Spy while enough other players are dealt in.
+ * Spy selection is random: drawn uniformly from the dealt players, never the same
+ * player(s) as last round while enough others are dealt in. (A strict rotation was
+ * dropped: with past Spies revealed every round it made the last Spy of a cycle certain.)
+ *
+ * Debate pacing: every human who is here can tap "ready to vote"; when all have, the
+ * debate ends early. The host can add EXTEND_MS up to MAX_EXTENSIONS times (clears ready taps).
  *
  * Session end (endSession): the host ending the session (or leaving mid-game)
  * jumps everyone to game-over with final standings from the current scores; an
@@ -52,8 +54,11 @@ import {
   AWAY_GRACE_MS,
   AWAY_TURN_MS,
   DEFAULT_SETTINGS,
+  EXTEND_MS,
   LOBBY_AWAY_GRACE_MS,
   LOBBY_REMOVE_MS,
+  lockBonus,
+  MAX_EXTENSIONS,
   MAX_ROUNDS_TARGET,
   TARGET_SCORES,
   RUNOFF_MS,
@@ -171,8 +176,10 @@ export class Game {
   /** when the session was ended (epoch ms) */
   sessionEndedAt: number | null = null;
   private stats = new Map<PlayerID, GameStats>();
-  /** fair Spy rotation: times each player has been Spy this game */
-  spyCounts = new Map<PlayerID, number>();
+  /** phase each early lock-in was made in (its bonus shrinks over the round) */
+  lockAt = new Map<PlayerID, Phase>();
+  /** +30s debate extensions used this round */
+  extensions = 0;
   /** Spies of the previous dealt round (not repeated back-to-back) */
   lastSpyIds: PlayerID[] = [];
   /** lastSpyIds before the current deal (restored if the round is aborted) */
@@ -240,11 +247,6 @@ export class Game {
       inRound: false
     };
     this.players.push(p);
-    // joiners start at the current minimum spy count, so they aren't forced to be Spy next
-    if (this.spyCounts.size > 0) {
-      const counts = this.players.filter((x) => this.spyCounts.has(x.id)).map((x) => this.spyCounts.get(x.id)!);
-      this.spyCounts.set(p.id, counts.length ? Math.min(...counts) : 0);
-    }
     void now;
     return p;
   }
@@ -407,6 +409,7 @@ export class Game {
     for (const [voter, target] of this.votes) if (target === id) this.votes.delete(voter);
     this.guesses.delete(id);
     this.locks.delete(id);
+    this.lockAt.delete(id);
     if (this.runoff) this.runoff = this.runoff.filter((x) => x !== id);
     if (p.isHost) this.ensureHost();
 
@@ -685,41 +688,29 @@ export class Game {
   }
 
   private resetSpyRotation(): void {
-    this.spyCounts.clear();
     this.lastSpyIds = [];
     this.prevLastSpyIds = [];
   }
 
   /**
-   * Fair rotation: draw uniformly (this.rng) among dealt players with the lowest
-   * spy count this game, excluding last round's Spies when that still leaves
-   * enough candidates (always true with >= 3 dealt and 1 Spy).
+   * Random Spies: uniform among dealt players, excluding last round's Spies when that
+   * still leaves enough candidates.
    */
   private pickSpies(dealt: PlayerID[], liarCount: number): PlayerID[] {
-    const known = dealt.filter((id) => this.spyCounts.has(id)).map((id) => this.spyCounts.get(id)!);
-    const min = known.length ? Math.min(...known) : 0;
-    for (const id of dealt) if (!this.spyCounts.has(id)) this.spyCounts.set(id, min);
     const picked: PlayerID[] = [];
     const fresh = dealt.filter((id) => !this.lastSpyIds.includes(id));
     const pool = dealt.length >= 3 && fresh.length >= liarCount ? fresh : dealt;
     for (let k = 0; k < liarCount; k++) {
       const left = pool.filter((id) => !picked.includes(id));
-      const low = Math.min(...left.map((id) => this.spyCounts.get(id)!));
-      const lowest = left.filter((id) => this.spyCounts.get(id) === low);
-      picked.push(lowest[Math.floor(this.rng() * lowest.length)]);
+      picked.push(left[Math.floor(this.rng() * left.length)]);
     }
-    for (const id of picked) this.spyCounts.set(id, this.spyCounts.get(id)! + 1);
     this.prevLastSpyIds = this.lastSpyIds;
     this.lastSpyIds = [...picked];
     return picked;
   }
 
-  /** undo the current deal's spy bookkeeping (round aborted before it was played) */
+  /** undo the current deal's bookkeeping (round aborted before it was played) */
   private undoSpyPick(): void {
-    for (const id of this.liarIds) {
-      const c = this.spyCounts.get(id);
-      if (c !== undefined) this.spyCounts.set(id, Math.max(0, c - 1));
-    }
     this.lastSpyIds = this.prevLastSpyIds;
   }
 
@@ -775,6 +766,8 @@ export class Game {
     this.votes.clear();
     this.guesses.clear();
     this.locks.clear();
+    this.lockAt.clear();
+    this.extensions = 0;
     this.runoff = null;
     this.firstVotes = null;
     this.accusedId = null;
@@ -800,6 +793,11 @@ export class Game {
     if (clue.length === 0) throw new GameError('Clue is empty');
     if (/\s/.test(clue)) throw new GameError('One word only');
     if (clue.length > MAX_CLUE_LENGTH) throw new GameError(`Max ${MAX_CLUE_LENGTH} characters`);
+    const norm = clue.toLowerCase();
+    if (this.clues.some((c) => c.text?.toLowerCase() === norm)) throw new GameError('Someone already said that. Pick another word.');
+    // Agents can't say the codeword itself. Checked for Agents only: refusing the Spy would leak it.
+    if (!this.liarIds.includes(id) && this.secretWord && norm === this.secretWord.toLowerCase())
+      throw new GameError("That gives it away. Pick a different word.");
     this.clues.push({ playerId: id, text: clue, at: now });
     this.advanceTurn(now);
   }
@@ -845,6 +843,7 @@ export class Game {
     if (early) {
       if (this.locks.has(id)) throw new GameError('You already locked in a guess');
       this.locks.set(id, match);
+      this.lockAt.set(id, this.phase);
       return;
     }
     if (this.guesses.has(id)) throw new GameError('You already guessed');
@@ -854,6 +853,27 @@ export class Game {
       return;
     }
     this.checkAutoAdvance(now);
+  }
+
+  /** debate: "ready to vote". Voting starts once every human who is here has tapped it. */
+  discussionReady(id: PlayerID, now: number): void {
+    this.assertLive();
+    const p = this.mustGet(id);
+    if (this.phase !== 'discussion') return;
+    if (!p.inRound) throw new GameError("You're not in this round");
+    p.ready = true;
+    this.checkAutoAdvance(now);
+  }
+
+  /** host: +30s of debate, up to MAX_EXTENSIONS times a round; clears everyone's ready tap */
+  extendDiscussion(byId: PlayerID, now: number): void {
+    this.assertLive();
+    this.requireHost(byId);
+    if (this.phase !== 'discussion' || this.phaseEndsAt === null) throw new GameError('Nothing to extend');
+    if (this.extensions >= MAX_EXTENSIONS) throw new GameError('The debate has already been extended twice');
+    this.extensions++;
+    this.phaseEndsAt = Math.max(this.phaseEndsAt, now) + EXTEND_MS;
+    for (const p of this.players) p.ready = false;
   }
 
   skipPhase(byId: PlayerID, now: number): void {
@@ -1012,6 +1032,8 @@ export class Game {
   }
 
   private enterDiscussion(now: number): void {
+    for (const p of this.players) p.ready = false;
+    this.extensions = 0;
     this.setPhase('discussion', now + this.ms(this.settings.discussionSeconds));
   }
 
@@ -1075,7 +1097,10 @@ export class Game {
         if (!liarCaught) add('spy-escapes');
         else if (correct) add('spy-cracks-codeword');
         const lock = this.locks.get(p.id);
-        if (lock !== undefined && this.isCorrect(lock)) add('spy-early-lock');
+        if (lock !== undefined && this.isCorrect(lock)) {
+          const pts = lockBonus(this.lockAt.get(p.id) ?? 'voting');
+          if (pts > 0) mine.push({ rule: 'spy-early-lock', points: pts });
+        }
       } else {
         const v = finalVote(p.id);
         if (v && this.liarIds.includes(v)) add('agent-spotted-spy');
@@ -1193,6 +1218,12 @@ export class Game {
         if (!cur || !cur.connected) this.advanceTurn(now);
         break;
       }
+      case 'discussion': {
+        // bots never tap ready; they don't hold the debate open
+        const humans = here.filter((p) => !p.isBot);
+        if (humans.length > 0 && humans.every((p) => p.ready)) this.timeout(now);
+        break;
+      }
       case 'voting':
         if (
           (active.length > 0 && active.every((p) => this.votes.has(p.id))) ||
@@ -1272,7 +1303,8 @@ export class Game {
         result: showResult && this.result ? { ...this.result, endsGame: this.phase === 'game-over' || this.gameEnds() } : null,
         runoff: this.phase === 'voting' && this.runoff ? [...this.runoff] : null,
         warmup: this.warmup,
-        practice: this.warmup
+        practice: this.warmup,
+        extensions: this.extensions
       },
       packs,
       premium: this.premium

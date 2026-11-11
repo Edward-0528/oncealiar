@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { WARMUP_FACTOR } from '@oncealiar/shared';
+import { MAX_EXTENSIONS, WARMUP_FACTOR } from '@oncealiar/shared';
 import { useGame, usePlayers, useTopic } from '../state/GameProvider';
 import { CountdownRing } from '../components/Countdown';
 import { TopicGrid } from '../components/TopicGrid';
 import { PeekButton, PrivateFile } from '../components/Dock';
 import { ReactionPad, ReactionSplash } from '../components/ReactionSplash';
 import { Sheet } from '../components/Sheet';
+import { ActionButton } from '../components/ActionButton';
 import { ClueList } from './Clues';
 import { Icon } from '../components/Icon';
 import { CoachTip } from '../components/coach/CoachTip';
@@ -39,9 +40,13 @@ export function Discussion() {
   const [file, setFile] = useState(false);
   if (!game || !you) return null;
   const total = game.settings.discussionSeconds * (game.round.warmup ? WARMUP_FACTOR : 1);
+  const humans = game.players.filter((p) => !p.isBot && p.connected && p.presence === 'online');
+  const readyCount = humans.filter((p) => p.ready).length;
+  const meReady = !!game.players.find((p) => p.id === you.playerId)?.ready;
+  const extensionsLeft = MAX_EXTENSIONS - (game.round.extensions ?? 0);
   return (
     <main className="screen discuss">
-      <p className="discuss__meta type">Round {game.round.number} · Open debate · voting when the clock runs out</p>
+      <p className="discuss__meta type">Round {game.round.number} · Open debate · voting when the clock runs out or everyone is ready</p>
       <section className="discuss__hero" aria-labelledby="discuss-h">
         <CountdownRing endsAt={game.round.phaseEndsAt} totalSeconds={total} size={156} tick label="Debate time left">
           <BigClock endsAt={game.round.phaseEndsAt} />
@@ -96,6 +101,27 @@ export function Discussion() {
           <PrivateFile />
         </div>
       </Sheet>
+
+      <ActionButton
+        className="btn btn--primary btn--block"
+        onAct={actions.discussionReady}
+        disabled={meReady}
+        pendingLabel="Sending…"
+      >
+        {meReady ? `Ready · ${readyCount} of ${humans.length} here` : 'Ready to vote'}
+      </ActionButton>
+
+      {isHost && (
+        <ActionButton
+          className="btn btn--block discuss__host"
+          onAct={actions.extendDiscussion}
+          disabled={extensionsLeft <= 0}
+          pendingLabel="Adding…"
+        >
+          <span className="discuss__host-tag">Host</span>
+          {extensionsLeft > 0 ? `+30 seconds (${extensionsLeft} left)` : 'No more extensions'}
+        </ActionButton>
+      )}
 
       {isHost && (
         <button className="btn btn--block discuss__host" onClick={actions.skip}>
