@@ -69,6 +69,10 @@ export interface GameStore {
     submitClue: (text: string) => Promise<boolean>;
     clueDone: () => Promise<boolean>;
     skip: () => Promise<boolean>;
+    /** debate: "ready to vote" (voting starts once every human here is ready) */
+    discussionReady: () => Promise<boolean>;
+    /** host: +30s of debate (max twice) */
+    extendDiscussion: () => Promise<boolean>;
     vote: (id: PlayerID) => Promise<boolean>;
     guess: (word: string) => Promise<boolean>;
     next: () => Promise<boolean>;
@@ -373,6 +377,8 @@ export function GameProvider({ transport, children }: { transport: Transport; ch
       submitClue: (text) => send((ack) => t.emit('clue:submit', text, ack)),
       clueDone: () => send((ack) => t.emit('clue:done', ack)),
       skip: () => send((ack) => t.emit('phase:skip', ack)),
+      discussionReady: () => send((ack) => t.emit('discussion:ready', ack)),
+      extendDiscussion: () => send((ack) => t.emit('discussion:extend', ack)),
       vote: (id) => send((ack) => t.emit('vote:cast', id, ack)),
       guess: (word) => send((ack) => t.emit('guess:submit', word, ack)),
       next: () => send((ack) => t.emit('round:next', ack)),

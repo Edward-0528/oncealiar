@@ -14,8 +14,17 @@ export const RUNOFF_MS = 10_000;
 /** Timer multiplier for the warm-up/practice round (first round played in a room; its points don't count). */
 export const WARMUP_FACTOR = 1.5;
 /** Two Spies are recommended from this many players (allowed from 7). */
-export const TWO_SPIES_FROM = 8;
+export const TWO_SPIES_FROM = 10;
 export const TWO_SPIES_MIN = 7;
+
+/** Debate pacing: the host can add this much time, at most MAX_EXTENSIONS times per round. */
+export const EXTEND_MS = 30_000;
+export const MAX_EXTENSIONS = 2;
+
+/** Early lock-in bonus shrinks as the round goes on, so locking early is a real decision. */
+export const LOCK_BONUS = { clues: 2, discussion: 1, voting: 0 } as const;
+export type LockPhase = keyof typeof LOCK_BONUS;
+export const lockBonus = (phase: string): number => (LOCK_BONUS as Record<string, number>)[phase] ?? 0;
 
 /** First-to-N mode: allowed targets and a hard cap so a game can't run forever. */
 export const TARGET_SCORES = [10, 15, 20] as const;
@@ -31,7 +40,7 @@ export const LOBBY_REMOVE_MS = 15 * 60_000;
 export const SCORE: Record<ScoreRuleId, number> = {
   'spy-escapes': 3,
   'spy-cracks-codeword': 2,
-  'spy-early-lock': 1,
+  'spy-early-lock': LOCK_BONUS.clues,
   'agent-spotted-spy': 1,
   'agent-team-win': 1
 };
@@ -49,7 +58,7 @@ export interface ScoreRuleCopy {
 export const SCORE_RULES: ScoreRuleCopy[] = [
   { id: 'spy-escapes', points: SCORE['spy-escapes'], role: 'spy', label: 'Escaped', rule: 'Spy: not the most-voted player? +3.' },
   { id: 'spy-cracks-codeword', points: SCORE['spy-cracks-codeword'], role: 'spy', label: 'Cracked it', rule: 'Spy: caught, but guess the codeword? +2 and the round.' },
-  { id: 'spy-early-lock', points: SCORE['spy-early-lock'], role: 'spy', label: 'Early lock', rule: 'Spy: lock in a correct guess before the vote ends? +1 bonus — but it is your final answer.' },
+  { id: 'spy-early-lock', points: SCORE['spy-early-lock'], role: 'spy', label: 'Early lock', rule: 'Spy: lock in a correct guess early? +2 during clues, +1 during the debate, nothing once voting starts. It is your final answer if caught.' },
   { id: 'agent-spotted-spy', points: SCORE['agent-spotted-spy'], role: 'agent', label: 'Spotted the Spy', rule: 'Agent: your vote was on the Spy? +1, even if the group got it wrong.' },
   { id: 'agent-team-win', points: SCORE['agent-team-win'], role: 'agent', label: 'Team win', rule: 'Agents: catch the Spy and they miss the codeword? +1 each.' }
 ];
@@ -79,7 +88,8 @@ export const RULES_ONE_LINERS = {
   vote: 'Discuss, then vote: the most-voted player is accused.',
   tie: 'Tied vote? A 10-second sudden-death re-vote between the tied players; still tied, the Spy slips away.',
   lastGuess: 'A caught Spy can still win by guessing the codeword from the grid.',
-  earlyLock: 'The Spy may lock in a guess early for +1 — it becomes their final answer if caught.',
+  earlyLock: 'The Spy may lock in a guess early: +2 during clues, +1 during the debate. It becomes their final answer if caught.',
+  readyToVote: 'Everyone ready? Tap Ready to vote and the debate ends early. The host can add 30 seconds, twice.',
   practice: 'The first round in a room is a practice round: longer timers, and its points are shown but don\'t count.',
   away: 'Stepped away to answer a text? You keep your seat for 2 minutes; your turn waits up to 20 seconds.'
 } as const;
@@ -101,7 +111,7 @@ export function recommendedSpyCount(players: number): 1 | 2 {
 /**
  * Settings patch for a preset, scaled to the group: discussion grows 10s per
  * player above 6 (more suspects to talk through) and shrinks for 3–4 players;
- * 2 Spies from 8 players.
+ * 2 Spies from 10 players.
  */
 export function presetSettings(preset: GamePreset, players: number): Partial<GameSettings> {
   const p = GAME_PRESETS[preset];

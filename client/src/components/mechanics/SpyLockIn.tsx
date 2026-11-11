@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { SCORE } from '@oncealiar/shared';
+import { lockBonus } from '@oncealiar/shared';
+import { useGame } from '../../state/GameProvider';
 import './mechanics.css';
 
 interface Props {
@@ -19,19 +20,22 @@ interface Props {
 export function SpyLockIn({ words, lockedGuess, onLock }: Props) {
   const [open, setOpen] = useState(false);
   const [pick, setPick] = useState<string | null>(null);
+  const { game } = useGame();
+  const bonus = lockBonus(game?.round.phase ?? 'discussion');
+  const bonusText = bonus > 0 ? `+${bonus} if right` : 'no bonus now';
 
   if (lockedGuess) {
     return (
       <div className="mx-lock mx-lock--done" role="status">
         <span aria-hidden="true">🔒</span> Locked in: <b>{lockedGuess}</b>
-        <span className="mx-lock__hint">+{SCORE['spy-early-lock']} if right · your final answer if caught</span>
+        <span className="mx-lock__hint">{bonusText} · your final answer if caught</span>
       </div>
     );
   }
   if (!open) {
     return (
       <button type="button" className="mx-lock__open" onClick={() => setOpen(true)}>
-        <span aria-hidden="true">🔒</span> Know the codeword? Lock it in for +{SCORE['spy-early-lock']}
+        <span aria-hidden="true">🔒</span> Know the codeword? Lock it in ({bonus > 0 ? `+${bonus}` : 'no bonus now'})
       </button>
     );
   }

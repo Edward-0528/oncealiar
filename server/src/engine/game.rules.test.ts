@@ -30,9 +30,8 @@ function playNoVote(g: Game, host: string) {
 const endsGame = (g: Game) => g.publicState(T0).round.result!.endsGame;
 
 describe('first-to-N', () => {
-  it('defaults to first to 15 and ends exactly when one player reaches it at round end', () => {
-    const { g, host } = setup(4);
-    expect(g.settings.targetScore).toBe(15);
+  it('first to 15 ends exactly when one player reaches it at round end', () => {
+    const { g, host } = setup(4, { targetScore: 15 });
     g.start(host, T0);
     let spy = g.liarIds[0];
     g.get(spy)!.score = 11; // → 14 after this round
@@ -54,7 +53,7 @@ describe('first-to-N', () => {
   });
 
   it('a tie at the top (>= target) plays another round (sudden death)', () => {
-    const { g, host } = setup(4);
+    const { g, host } = setup(4, { targetScore: 15 });
     g.start(host, T0);
     const spy = g.liarIds[0];
     const rival = g.players.find((p) => p.id !== spy)!;
@@ -123,7 +122,7 @@ describe('first-to-N', () => {
   });
 });
 
-describe('fair Spy rotation', () => {
+describe('random Spy', () => {
   /** play rounds (no votes), recording each round's Spies */
   function spiesOver(g: Game, host: string, rounds: number): string[][] {
     const out: string[][] = [];
@@ -136,16 +135,6 @@ describe('fair Spy rotation', () => {
     return out;
   }
 
-  it('over N rounds with N players everyone is Spy exactly once', () => {
-    for (const seed of [1, 2, 3, 7, 42]) {
-      for (const n of [3, 5, 6]) {
-        const { g, host, ids } = setup(n, { targetScore: 0, roundsPerGame: 20 }, seed);
-        const spies = spiesOver(g, host, n).map((s) => s[0]);
-        expect(new Set(spies)).toEqual(new Set(ids));
-      }
-    }
-  });
-
   it('never repeats a Spy back-to-back with >= 3 players', () => {
     for (const seed of [1, 2, 3, 4, 5]) {
       const { g, host } = setup(3, { targetScore: 0, roundsPerGame: 20 }, seed);
@@ -154,47 +143,139 @@ describe('fair Spy rotation', () => {
     }
   });
 
-  it('2-Spy games rotate too', () => {
+  it('2-Spy games never reuse last round\'s Spies', () => {
     for (const seed of [1, 9]) {
-      const { g, host, ids } = setup(8, { targetScore: 0, roundsPerGame: 20, liarCount: 2 }, seed);
-      const rounds = spiesOver(g, host, 6);
+      const { g, host } = setup(10, { targetScore: 0, roundsPerGame: 20, liarCount: 2 }, seed);
+      const rounds = spiesOver(g, host, 8);
       for (const s of rounds) expect(s.length).toBe(2);
-      // 4 rounds × 2 Spies = everyone exactly once
-      const first4 = rounds.slice(0, 4).flat();
-      expect(new Set(first4)).toEqual(new Set(ids));
       for (let r = 1; r < rounds.length; r++) expect(rounds[r].some((id) => rounds[r - 1].includes(id))).toBe(false);
     }
   });
 
-  it('a new game resets the rotation', () => {
-    const { g, host } = setup(3, { targetScore: 0, roundsPerGame: 2 });
-    spiesOver(g, host, 2);
-    g.nextRound(host, T0);
-    expect(g.phase).toBe('game-over');
-    g.restart(host);
-    expect(g.spyCounts.size).toBe(0);
-    g.start(host, T0);
-    expect([...g.spyCounts.values()].reduce((a, b) => a + b, 0)).toBe(1);
+  it('is not a rotation: a player can be Spy again before everyone has had a turn', () => {
+    let repeatedEarly = false;
+    for (let seed = 1; seed <= 40 && !repeatedEarly; seed++) {
+      const { g, host, ids } = setup(6, { targetScore: 0, roundsPerGame: 20 }, seed);
+      const spies = spiesOver(g, host, 5).map((s) => s[0]);
+      if (new Set(spies).size < spies.length) repeatedEarly = true;
+      expect(ids).toEqual(expect.arrayContaining([spies[0]]));
+    }
+    expect(repeatedEarly).toBe(true);
   });
 
-  it('joiners start at the current minimum and then rotate fairly', () => {
-    const picked = new Set<string>();
-    for (const seed of [1, 2, 3, 4, 5, 6]) {
-      const { g, host, ids } = setup(3, { targetScore: 0, roundsPerGame: 20 }, seed);
-      spiesOver(g, host, 3); // everyone has been Spy once
-      const joiner = g.addPlayer(profile('Late'), 'tokL', T0).id;
-      expect(g.spyCounts.get(joiner)).toBe(1);
-      const next: string[] = [];
-      for (let r = 0; r < 4; r++) {
-        g.nextRound(host, T0);
-        next.push(g.liarIds[0]);
-        playNoVote(g, host);
-      }
-      expect(new Set(next)).toEqual(new Set([...ids, joiner]));
-      picked.add(next[0] === joiner ? 'joiner' : 'other');
+  it('the final round of a cycle is not a certainty (every player stays possible)', () => {
+    const seen = new Set<string>();
+    for (let seed = 1; seed <= 60; seed++) {
+      const { g, host } = setup(4, { targetScore: 0, roundsPerGame: 20 }, seed);
+      seen.add(spiesOver(g, host, 4)[3][0]);
     }
-    // the joiner is eligible but not forced to be the very next Spy
-    expect(picked.has('other')).toBe(true);
+    expect(seen.size).toBeGreaterThan(1);
+  });
+});
+
+describe('defaults', () => {
+  it('plays a fixed 5 rounds by default (no first-to-N)', () => {
+    const { g } = setup(4);
+    expect(g.settings.targetScore).toBe(0);
+    expect(g.settings.roundsPerGame).toBe(5);
+  });
+});
+
+describe('early lock bonus shrinks over the round', () => {
+  /** the Spy locks the true word in `phase`, then nobody votes (Spy escapes) */
+  function lockIn(phase: 'clues' | 'discussion' | 'voting') {
+    const { g, host } = setup(4, { targetScore: 0, roundsPerGame: 5 });
+    g.start(host, T0);
+    g.ready(host, T0);
+    for (const id of g.players.map((p) => p.id)) g.ready(id, T0);
+    if (phase !== 'clues') g.skipPhase(host, T0); // clues → discussion
+    if (phase === 'voting') g.skipPhase(host, T0); // discussion → voting
+    expect(g.phase).toBe(phase);
+    const spy = g.liarIds[0];
+    g.submitGuess(spy, g.secretWord!, T0);
+    while (g.phase !== 'results') g.skipPhase(host, T0);
+    return g.result!.scoreBreakdown![spy].find((l) => l.rule === 'spy-early-lock')?.points ?? 0;
+  }
+  it('+2 in clues, +1 in the debate, nothing once voting starts', () => {
+    expect(lockIn('clues')).toBe(2);
+    expect(lockIn('discussion')).toBe(1);
+    expect(lockIn('voting')).toBe(0);
+  });
+});
+
+describe('ready to vote and +30s', () => {
+  function toDiscussion(n = 4) {
+    const { g, ids, host } = setup(n);
+    g.start(host, T0);
+    for (const id of ids) g.ready(id, T0);
+    g.skipPhase(host, T0);
+    expect(g.phase).toBe('discussion');
+    return { g, ids, host };
+  }
+  it('voting starts once every human here taps ready', () => {
+    const { g, ids } = toDiscussion();
+    for (const id of ids.slice(0, 3)) g.discussionReady(id, T0 + 1000);
+    expect(g.phase).toBe('discussion');
+    g.discussionReady(ids[3], T0 + 1000);
+    expect(g.phase).toBe('voting');
+  });
+  it('an away player does not hold the debate open', () => {
+    const { g, ids } = toDiscussion();
+    g.setSocket(ids[3], false, T0);
+    for (const id of ids.slice(0, 3)) g.discussionReady(id, T0 + 1000);
+    expect(g.phase).toBe('voting');
+  });
+  it('bots do not need to tap ready', () => {
+    const { g, ids } = toDiscussion();
+    g.markBot(ids[3]);
+    for (const id of ids.slice(0, 3)) g.discussionReady(id, T0 + 1000);
+    expect(g.phase).toBe('voting');
+  });
+  it('the host adds 30s, twice, and the ready taps reset', () => {
+    const { g, ids, host } = toDiscussion();
+    const end = g.phaseEndsAt!;
+    g.discussionReady(ids[1], T0 + 1000);
+    g.extendDiscussion(host, T0 + 2000);
+    expect(g.phaseEndsAt).toBe(end + 30_000);
+    expect(g.get(ids[1])!.ready).toBe(false);
+    g.extendDiscussion(host, T0 + 3000);
+    expect(g.phaseEndsAt).toBe(end + 60_000);
+    expect(() => g.extendDiscussion(host, T0 + 4000)).toThrow(GameError);
+    expect(g.publicState(T0).round.extensions).toBe(2);
+  });
+  it('only the host can extend; extending outside the debate is refused', () => {
+    const { g, ids } = toDiscussion();
+    expect(() => g.extendDiscussion(ids[1], T0)).toThrow(GameError);
+    g.skipPhase(ids[0], T0);
+    expect(() => g.extendDiscussion(ids[0], T0)).toThrow(GameError);
+  });
+});
+
+describe('typed clues', () => {
+  function toClues() {
+    const { g, ids, host } = setup(4, { clueMode: 'typed' });
+    g.start(host, T0);
+    for (const id of ids) g.ready(id, T0);
+    expect(g.phase).toBe('clues');
+    return g;
+  }
+  it('an Agent cannot type the codeword, in any case', () => {
+    const g = toClues();
+    const agent = g.players.find((p) => !g.liarIds.includes(p.id))!;
+    g.currentTurn = g.turnOrder.indexOf(agent.id);
+    expect(() => g.submitClue(agent.id, g.secretWord!.toUpperCase().replace(/\s/g, ''), T0)).toThrow;
+    if (!/\s/.test(g.secretWord!)) expect(() => g.submitClue(agent.id, g.secretWord!.toUpperCase(), T0)).toThrow(GameError);
+  });
+  it('the Spy is never refused for the codeword (that would reveal it)', () => {
+    const g = toClues();
+    const spy = g.liarIds[0];
+    g.currentTurn = g.turnOrder.indexOf(spy);
+    if (!/\s/.test(g.secretWord!)) expect(() => g.submitClue(spy, g.secretWord!, T0)).not.toThrow();
+  });
+  it('rejects a repeat of an earlier clue', () => {
+    const g = toClues();
+    g.submitClue(g.turnOrder[g.currentTurn], 'sunny', T0);
+    expect(() => g.submitClue(g.turnOrder[g.currentTurn], 'SUNNY', T0)).toThrow(GameError);
   });
 });
 

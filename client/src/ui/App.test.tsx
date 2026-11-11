@@ -112,6 +112,12 @@ describe('App (mock mode)', () => {
     expect(await screen.findByText(/cleared/i)).toBeInTheDocument();
   });
 
+  it('the debate has a Ready to vote button that records your tap', async () => {
+    renderMock('discussion');
+    fireEvent.click(await screen.findByRole('button', { name: /ready to vote/i }));
+    expect(await screen.findByRole('button', { name: /^ready · \d+ of \d+ here/i })).toBeDisabled();
+  });
+
   it('renders reactions as rubber stamps', async () => {
     renderMock('discussion');
     expect(await screen.findByRole('button', { name: /stamp lol/i })).toHaveTextContent('LOL');
@@ -119,7 +125,7 @@ describe('App (mock mode)', () => {
   });
 
   it('prints a tabloid headline on the results summary', async () => {
-    renderMock('results', { caught: '1' });
+    renderMock('results', { caught: '1', target: '15' });
     fireEvent.click(await screen.findByRole('button', { name: /skip/i }));
     expect(await screen.findByText(/exposed!|escaped!|the code!/i)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /race to 15/i })).toBeInTheDocument();

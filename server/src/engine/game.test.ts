@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { AWAY_GRACE_MS, AWAY_TURN_MS, LOBBY_AWAY_GRACE_MS, LOBBY_REMOVE_MS, MAX_ROUNDS_TARGET, RUNOFF_MS, SCORE, WARMUP_FACTOR, type GameSettings } from '@oncealiar/shared';
+import { AWAY_GRACE_MS, AWAY_TURN_MS, LOBBY_AWAY_GRACE_MS, LOBBY_REMOVE_MS, MAX_ROUNDS_TARGET, RUNOFF_MS, SCORE, lockBonus, WARMUP_FACTOR, type GameSettings } from '@oncealiar/shared';
 import { Game, GameError, ROLE_REVEAL_MS } from './game.js';
 import { FIXTURE_PACKS, profile, seeded } from '../test/fixtures.js';
 
@@ -425,8 +425,9 @@ describe('secrecy', () => {
     check();
     for (const p of g.players) g.ready(p.id, T0);
     check();
+    let n = 0;
     for (const id of [...g.turnOrder]) {
-      g.submitClue(id, 'clue', T0);
+      g.submitClue(id, `clue${n++}`, T0);
       check();
     }
     g.skipPhase(host, T0);
@@ -625,7 +626,7 @@ describe('sudden-death re-vote', () => {
 });
 
 describe('early lock-in', () => {
-  it('spy locks once during discussion; it is private, earns +1 if right, and is the final answer when caught', () => {
+  it('spy locks once during discussion; it is private, earns +1 in the debate if right, and is the final answer when caught', () => {
     const { g, host } = setup(4);
     toClues(g, host);
     g.skipPhase(host, T0); // → discussion
@@ -644,17 +645,17 @@ describe('early lock-in', () => {
     const r = g.result!;
     expect(r).toMatchObject({ liarCaught: true, liarGuessCorrect: true, guessLocked: true, winner: 'liar' });
     expect(r.lockedGuesses).toEqual({ [L]: g.secretWord });
-    expect(r.scoreDeltas[L]).toBe(SCORE['spy-cracks-codeword'] + SCORE['spy-early-lock']);
+    expect(r.scoreDeltas[L]).toBe(SCORE['spy-cracks-codeword'] + lockBonus('discussion'));
     expect(r.scoreDeltas[t[0]]).toBe(SCORE['agent-spotted-spy']);
   });
 
-  it('a correct lock-in is a +1 bonus even when the spy escapes; a wrong one costs nothing', () => {
+  it('a correct lock-in during voting earns no bonus (+0) even when the spy escapes; a wrong one costs nothing', () => {
     const { g, host } = setup(4);
     toVoting(g, host);
     const L = liar(g);
     g.submitGuess(L, g.secretWord!, T0);
     g.tick(g.phaseEndsAt!); // nobody voted
-    expect(g.result!.scoreDeltas[L]).toBe(SCORE['spy-escapes'] + SCORE['spy-early-lock']);
+    expect(g.result!.scoreDeltas[L]).toBe(SCORE['spy-escapes'] + lockBonus('voting'));
     g.nextRound(host, T0);
     for (const p of g.players) g.ready(p.id, T0);
     g.skipPhase(host, T0);

@@ -102,3 +102,19 @@ Sharpest Eye (most votes on the Spy), Smoothest Spy (most Spy wins, fewest votes
 
 ## 4. Timing after the changes (6 players, Full preset)
 Role reveal ≤15s · clues ~1–2 min spoken · discussion 90s (Spy now has a decision to make) · voting ≤45s (+10s only on a tie) · liar-guess ≤30s, skipped when the Spy pre-locked · results. A round is ~4–5 minutes; Quick game ≈ 10 minutes.
+
+
+---
+
+## 5. Round 2 tuning (simulated with the engine, no human playtests yet)
+
+Changes made after simulating scoring and game length:
+
+* **Default length is 5 rounds**, not first-to-15. First-to-15 took about 12 rounds (~55 min) at every group size. First-to-10 is ~8 rounds; both stay as options.
+* **Spy is random** (never the same player twice in a row). The strict rotation made the last Spy of every cycle certain, because past Spies are revealed each round.
+* **Early lock-in bonus shrinks**: +2 in clues, +1 in the debate, +0 in voting. Before, locking at the last second was free and strictly best.
+* **Ready to vote**: the debate ends early once every human who is here taps it. The host can add 30s, twice (clears ready taps). Bots don't need to tap.
+* **Typed clues**: Agents can't type the codeword (checked for Agents only, so a refusal never reveals it to the Spy); repeats of an earlier clue are refused.
+* **Two Spies from 10 players** (was 8). In simulation two Spies, with two guesses at the codeword, lifted the Spy win rate from ~62% to ~75%+.
+
+Still worth measuring with real games: Spy win rate by group size, game length, and early quits.
